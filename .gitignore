@@ -1,0 +1,124 @@
+/node_modules
+/dist
+/bundles
+/lite/static/bundles
+/lite/static/bundledAssets
+/lite/ascope_assets
+/lite/ipk/build
+/lite/ipk/*.ipk
+/ffmpeg
+/src/licenses.json
+/ThirdPartyLicenses.txt
+/eng.traineddata.gz
+/runOwletDownload.js
+/owlet
+
+### Docs ###
+
+# Dependencies
+/docs/node_modules
+
+# Production
+/docs/build
+
+# Generated files
+/docs/.docusaurus
+/docs/.cache-loader
+
+# Misc
+/docs/.DS_Store
+/docs/.env.local
+/docs/.env.development.local
+/docs/.env.test.local
+/docs/.env.production.local
+
+/docs/npm-debug.log*
+/docs/yarn-debug.log*
+/docs/yarn-error.log*
+
+### Linux ###
+*~
+
+### Yarn ###
+yarn.lock
+
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# KDE directory preferences
+.directory
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*
+
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+### Windows ###
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# IDE Specific Files
+.idea
+
+# Xcode
+build/*
+*.pbxuser
+*.mode1v3
+xcuserdata

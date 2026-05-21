@@ -1,0 +1,117 @@
+/*
+  Copyright (c) 2021-2026 Littleton Robotics
+  http://github.com/Mechanical-Advantage
+
+  Use of this source code is governed by a BSD
+  license that can be found in the LICENSE file
+  at the root directory of this project.
+*/
+
+body {
+  background-color: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #222;
+  }
+}
+
+body.lite .hide-lite {
+  display: none;
+}
+
+table {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: calc(100% - 20px);
+  border-spacing: 0px;
+}
+
+tr {
+  line-height: 27px;
+}
+
+td {
+  margin: 0px;
+  padding: 0px;
+}
+
+td.title {
+  white-space: nowrap;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  height: 34px;
+}
+
+td.title > hr {
+  margin-top: 5px;
+  margin-bottom: 0px;
+}
+
+td.subtitle {
+  white-space: nowrap;
+  text-align: center;
+  font-size: 12px;
+  font-style: italic;
+  height: 20px;
+  line-height: 20px;
+  padding-bottom: 7px;
+}
+
+td.info {
+  font-size: 12px;
+  text-align: center;
+  font-style: italic;
+  line-height: 15px;
+  padding-top: 5px;
+}
+
+td.label {
+  white-space: nowrap;
+  width: 0px;
+  text-align: right;
+  font-size: 14px;
+}
+
+input,
+select {
+  box-sizing: border-box;
+  display: block;
+  margin-left: 5px;
+  width: calc(100% - 5px);
+}
+
+input[type="file"] {
+  text-align: center;
+}
+
+button,
+div.help-div {
+  position: absolute;
+  bottom: 8px;
+  width: 30px;
+  height: 30px;
+}
+
+#exit {
+  right: 43px;
+}
+
+#confirm {
+  right: 8px;
+}
+
+div.help-div {
+  right: 78px;
+  width: 50px;
+}
+
+div.help-div > a {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
