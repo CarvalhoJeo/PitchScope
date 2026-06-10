@@ -95,7 +95,7 @@ export default class PassesNetRenderer implements TabRenderer {
       ctx.font = "16px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("No SPADL data — load a .spadl file", W / 2, H / 2);
+      ctx.fillText("Load a .spadl and .tracking file", W / 2, H / 2);
       return;
     }
 
@@ -141,6 +141,29 @@ export default class PassesNetRenderer implements TabRenderer {
       ctx.fillStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
       ctx.fill();
     });
+
+    // Draw failed pass edges (dashed, lower opacity, thinner)
+    if (command.showFailedPasses) {
+      command.failedEdges.forEach((edge) => {
+        let from = nodePos.get(edge.fromPlayer);
+        let to   = nodePos.get(edge.toPlayer);
+        if (!from || !to) return;
+
+        let color     = TEAM_COLORS[edge.teamId] ?? "#aaaaaa";
+        let alpha     = Math.min(0.4, 0.15 + 0.25 * (edge.count / maxCount));
+        let lineWidth = 1 + (edge.count / maxCount) * 3;
+
+        ctx.save();
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(from[0], from[1]);
+        ctx.lineTo(to[0], to[1]);
+        ctx.strokeStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
+        ctx.lineWidth   = lineWidth;
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
 
     // Fading pass-event arrows (age=0 bright/thick → age=1 transparent/thin)
     command.recentPasses.forEach((pass) => {
