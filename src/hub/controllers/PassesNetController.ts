@@ -18,15 +18,18 @@ export default class PassesNetController implements TabController {
   private TEAM_FILTER: HTMLSelectElement;
   private MIN_PASSES: HTMLInputElement;
   private SHOW_FAILED: HTMLInputElement;
+  private EDGE_LIST: HTMLElement;
 
   private avgPosCache: Map<number, { x: number; y: number; teamId: number }> | null = null;
   private avgPosCacheKey = "";
+  private lastEdgeListKey = "";
 
   constructor(root: HTMLElement) {
-    this.TIME_RANGE   = root.getElementsByClassName("time-range")[0]       as HTMLSelectElement;
-    this.TEAM_FILTER  = root.getElementsByClassName("team-filter")[0]      as HTMLSelectElement;
-    this.MIN_PASSES   = root.getElementsByClassName("min-passes")[0]       as HTMLInputElement;
+    this.TIME_RANGE   = root.getElementsByClassName("time-range")[0]         as HTMLSelectElement;
+    this.TEAM_FILTER  = root.getElementsByClassName("team-filter")[0]        as HTMLSelectElement;
+    this.MIN_PASSES   = root.getElementsByClassName("min-passes")[0]         as HTMLInputElement;
     this.SHOW_FAILED  = root.getElementsByClassName("show-failed-passes")[0] as HTMLInputElement;
+    this.EDGE_LIST    = root.getElementsByClassName("passes-net-edge-list")[0] as HTMLElement;
   }
 
   saveState(): unknown {
@@ -148,6 +151,21 @@ export default class PassesNetController implements TabController {
         if (e.count > maxEdgeCount) maxEdgeCount = e.count;
       }
     });
+
+    // Edge list panel — update DOM only when edge data changes
+    const edgeListKey = edges.map((e) => `${e.fromPlayer}-${e.toPlayer}:${e.count}`).join("|");
+    if (edgeListKey !== this.lastEdgeListKey) {
+      this.lastEdgeListKey = edgeListKey;
+      const sorted = [...edges].sort((a, b) => b.count - a.count);
+      if (sorted.length === 0) {
+        this.EDGE_LIST.innerHTML = '<span class="passes-net-edge-empty">No data</span>';
+      } else {
+        const rows = sorted
+          .map((e) => `<tr><td>${e.fromPlayer}</td><td>→</td><td>${e.toPlayer}</td><td>${e.count}</td></tr>`)
+          .join("");
+        this.EDGE_LIST.innerHTML = `<table class="passes-net-edge-table"><thead><tr><th>From</th><th></th><th>To</th><th>#</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+    }
 
     // Live positions + fading arrows
     let renderTime    = window.selection.getRenderTime() ?? logRange[0];
