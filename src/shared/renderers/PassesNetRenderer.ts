@@ -29,6 +29,8 @@ export interface PassesNetEdge {
 export interface PassesNetRendererCommand {
   nodes: PassesNetNode[];
   edges: PassesNetEdge[];
+  failedEdges: PassesNetEdge[];
+  showFailedPasses: boolean;
   maxEdgeCount: number;
   livePositions: PlayerPosition[];
   recentPasses: RecentPass[];
