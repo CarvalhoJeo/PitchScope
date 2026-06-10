@@ -1,17 +1,39 @@
 # PitchScope
 
-PitchScope is fork from [AdvantageScope](https://docs.advantagescope.org) robot diagnostics, log review/analysis, and data visualization application for FIRST teams developed by Team 6328. 
-
-PitchScope is meant to be used for similar purposes but with soccer data.
+PitchScope is a soccer data visualization and analysis application.
 
 PitchScope includes the following tools:
 
 - A wide selection of flexible graphs and charts
-- 2D soccer field visualization.
+- 2D soccer field visualization
 - Synchronized video playback from a separately loaded match video
-- Swerve drive module vector displays
 - Log statistics analysis
-- Flexible export options, with support for SPADL and players tracking
+- Flexible export options, with support for SPADL and player tracking
+
+---
+
+## Getting Started
+
+**Prerequisites:** Node.js 18+ and npm.
+
+```bash
+# Install dependencies (first time only)
+npm install
+
+# Compile TypeScript sources
+npm run compile
+
+# Launch the app
+npm start
+```
+
+For development, `npm run watch` recompiles automatically on file changes — run it alongside `npm start` in a separate terminal.
+
+To build a distributable package:
+
+```bash
+npm run build
+```
 
 ---
 
