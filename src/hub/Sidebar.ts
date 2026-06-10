@@ -464,6 +464,7 @@ export default class Sidebar {
     indent: number,
     generated = false
   ) {
+    if (title.startsWith("_")) return; // internal field, hidden from UI
     let hasChildren = Object.keys(field.children).length > 0;
     let childrenGenerated = generated || (field.fullKey !== null && window.log.isGeneratedParent(field.fullKey));
 

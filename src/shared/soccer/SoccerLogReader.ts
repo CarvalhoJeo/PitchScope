@@ -46,60 +46,62 @@ export interface RecentPass {
   age: number;
 }
 
+/** Binary-search for the last stored value at or before timestamp t. */
+function stepValueAt(data: { timestamps: number[]; values: number[] } | undefined, t: number): number {
+  if (!data || data.timestamps.length === 0) return 0;
+  let lo = 0, hi = data.timestamps.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (data.timestamps[mid] <= t) lo = mid; else hi = mid - 1;
+  }
+  return data.timestamps[lo] <= t ? data.values[lo] : 0;
+}
+
 /**
  * Reads all SPADL actions in [start, end].
  * Returns [] when no SPADL data is loaded.
+ *
+ * Uses /SPADL/seq as the canonical event-timestamp anchor because the log
+ * deduplicates consecutive equal values — fields like result_id (all 1s) or
+ * bodypart_id (all 0s) would otherwise collapse to a single entry.  seq
+ * increments with every action so all N timestamps are preserved.
  */
 export function readSoccerActions(start: number, end: number): SoccerAction[] {
-  const actionTypeIds = window.log.getNumber("/SPADL/action_type_id", start, end);
-  if (!actionTypeIds || actionTypeIds.timestamps.length === 0) return [];
+  const seqData = window.log.getNumber("/SPADL/_seq", start, end);
+  if (!seqData || seqData.timestamps.length === 0) return [];
 
-  const n = actionTypeIds.timestamps.length;
-  const periodIds   = window.log.getNumber("/SPADL/period_id",   start, end);
-  const teamIds     = window.log.getNumber("/SPADL/team_id",     start, end);
-  const playerIds   = window.log.getNumber("/SPADL/player_id",   start, end);
-  const resultIds   = window.log.getNumber("/SPADL/result_id",   start, end);
-  const bodypartIds = window.log.getNumber("/SPADL/bodypart_id", start, end);
-  const startXs     = window.log.getNumber("/SPADL/start_x",     start, end);
-  const startYs     = window.log.getNumber("/SPADL/start_y",     start, end);
-  const endXs       = window.log.getNumber("/SPADL/end_x",       start, end);
-  const endYs       = window.log.getNumber("/SPADL/end_y",       start, end);
+  const periodIds   = window.log.getNumber("/SPADL/period_id",      start, end);
+  const teamIds     = window.log.getNumber("/SPADL/team_id",        start, end);
+  const playerIds   = window.log.getNumber("/SPADL/player_id",      start, end);
+  const typeIds     = window.log.getNumber("/SPADL/action_type_id", start, end);
+  const resultIds   = window.log.getNumber("/SPADL/result_id",      start, end);
+  const bodypartIds = window.log.getNumber("/SPADL/bodypart_id",    start, end);
+  const startXs     = window.log.getNumber("/SPADL/start_x",        start, end);
+  const startYs     = window.log.getNumber("/SPADL/start_y",        start, end);
+  const endXs       = window.log.getNumber("/SPADL/end_x",          start, end);
+  const endYs       = window.log.getNumber("/SPADL/end_y",          start, end);
 
-  const safeN = Math.min(
-    n,
-    teamIds?.values.length     ?? n,
-    playerIds?.values.length   ?? n,
-    resultIds?.values.length   ?? n,
-    bodypartIds?.values.length ?? n,
-    startXs?.values.length     ?? n,
-    startYs?.values.length     ?? n,
-    endXs?.values.length       ?? n,
-    endYs?.values.length       ?? n
-  );
-
-  const actions: SoccerAction[] = new Array(safeN);
-  for (let i = 0; i < safeN; i++) {
-    const actionTypeId = actionTypeIds.values[i];
-    const resultId     = resultIds?.values[i]   ?? 0;
-    const bodypartId   = bodypartIds?.values[i] ?? 0;
-    actions[i] = {
-      timestamp:    actionTypeIds.timestamps[i],
-      periodId:     periodIds?.values[i]   ?? 0,
-      teamId:       teamIds?.values[i]     ?? 0,
-      playerId:     playerIds?.values[i]   ?? 0,
+  return seqData.timestamps.map((t) => {
+    const actionTypeId = stepValueAt(typeIds, t);
+    const resultId     = stepValueAt(resultIds, t);
+    const bodypartId   = stepValueAt(bodypartIds, t);
+    return {
+      timestamp:    t,
+      periodId:     stepValueAt(periodIds, t),
+      teamId:       stepValueAt(teamIds, t),
+      playerId:     stepValueAt(playerIds, t),
       actionTypeId,
       actionType:   SPADL_ACTION_TYPES[actionTypeId]  ?? "unknown",
       resultId,
       result:       SPADL_RESULT_TYPES[resultId]      ?? "unknown",
       bodypartId,
       bodypart:     SPADL_BODYPART_TYPES[bodypartId]  ?? "unknown",
-      startX:       startXs?.values[i]  ?? 0,
-      startY:       startYs?.values[i]  ?? 0,
-      endX:         endXs?.values[i]    ?? 0,
-      endY:         endYs?.values[i]    ?? 0
+      startX:       stepValueAt(startXs, t),
+      startY:       stepValueAt(startYs, t),
+      endX:         stepValueAt(endXs, t),
+      endY:         stepValueAt(endYs, t)
     };
-  }
-  return actions;
+  });
 }
 
 /** Collects player IDs from /TeamLocation/{id}/x field keys. */

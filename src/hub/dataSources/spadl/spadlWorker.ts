@@ -96,6 +96,7 @@ self.onmessage = async (event) => {
       let resultId = parseInt(cols[colIdx["result_id"]], 10);
       let bodypartId = parseInt(cols[colIdx["bodypart_id"]], 10);
 
+      log.putNumber("/SPADL/_seq", timeSeconds, i); // unique per event — anchors timestamps for bulk reads
       log.putNumber("/SPADL/period_id", timeSeconds, periodId);
       log.putNumber("/SPADL/team_id", timeSeconds, teamId);
       log.putNumber("/SPADL/player_id", timeSeconds, playerId);
