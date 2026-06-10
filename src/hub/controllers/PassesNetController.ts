@@ -94,20 +94,12 @@ export default class PassesNetController implements TabController {
       if (!PASS_ACTION_IDS.includes(action.actionTypeId)) continue;
       if (teamFilterNum !== -1 && action.teamId !== teamFilterNum) continue;
 
-      const positions = readPlayerPositions(action.timestamp);
-      if (positions.length === 0) continue;
-
       let receiver: number | null = null;
-      let bestDistSq = Infinity;
-      for (const pos of positions) {
-        if (pos.playerId === action.playerId) continue;
-        const dx = pos.x - action.endX;
-        const dy = pos.y - action.endY;
-        const distSq = dx * dx + dy * dy;
-        if (distSq < bestDistSq) {
-          bestDistSq = distSq;
-          receiver = pos.playerId;
-        }
+      for (let j = i + 1; j < n; j++) {
+        if (actions[j].periodId !== action.periodId) break;
+        if (actions[j].teamId !== action.teamId) break;
+        receiver = actions[j].playerId;
+        break;
       }
 
       if (receiver === null || receiver === action.playerId) continue;
