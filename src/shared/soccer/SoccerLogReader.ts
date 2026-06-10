@@ -152,6 +152,7 @@ export function readPlayerAveragePositions(
 ): Map<number, { x: number; y: number; teamId: number }> {
   const playerIds = getTrackedPlayerIds();
   const result = new Map<number, { x: number; y: number; teamId: number }>();
+  if (playerIds.length === 0) return result;
 
   for (const playerId of playerIds) {
     const xData    = window.log.getNumber(`/TeamLocation/${playerId}/x`,       start, end);
@@ -172,7 +173,7 @@ export function readPlayerAveragePositions(
     result.set(playerId, {
       x: sumX / n,
       y: sumY / n,
-      teamId: teamData && teamData.values.length > 0 ? teamData.values[0] : 0
+      teamId: teamData && teamData.values.length > 0 ? teamData.values[teamData.values.length - 1] : 0
     });
   }
 
