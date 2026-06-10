@@ -7,14 +7,13 @@
 
 import { PASS_ACTION_IDS } from "../../shared/SoccerTypes";
 import { PassesNetEdge, PassesNetNode, PassesNetRendererCommand } from "../../shared/renderers/PassesNetRenderer";
-import { readSoccerActions, readPlayerPositions, readRecentPasses, readPlayerAveragePositions } from "../../shared/soccer/SoccerLogReader";
+import { readSoccerActions, readPlayerAveragePositions } from "../../shared/soccer/SoccerLogReader";
 import { createUUID } from "../../shared/util";
 import TabController from "./TabController";
 
 export default class PassesNetController implements TabController {
   UUID = createUUID();
 
-  private TIME_RANGE: HTMLSelectElement;
   private TEAM_FILTER: HTMLSelectElement;
   private MIN_PASSES: HTMLInputElement;
   private SHOW_FAILED: HTMLInputElement;
@@ -25,26 +24,23 @@ export default class PassesNetController implements TabController {
   private lastEdgeListKey = "";
 
   constructor(root: HTMLElement) {
-    this.TIME_RANGE   = root.getElementsByClassName("time-range")[0]         as HTMLSelectElement;
-    this.TEAM_FILTER  = root.getElementsByClassName("team-filter")[0]        as HTMLSelectElement;
-    this.MIN_PASSES   = root.getElementsByClassName("min-passes")[0]         as HTMLInputElement;
-    this.SHOW_FAILED  = root.getElementsByClassName("show-failed-passes")[0] as HTMLInputElement;
+    this.TEAM_FILTER  = root.getElementsByClassName("team-filter")[0]          as HTMLSelectElement;
+    this.MIN_PASSES   = root.getElementsByClassName("min-passes")[0]           as HTMLInputElement;
+    this.SHOW_FAILED  = root.getElementsByClassName("show-failed-passes")[0]   as HTMLInputElement;
     this.EDGE_LIST    = root.getElementsByClassName("passes-net-edge-list")[0] as HTMLElement;
   }
 
   saveState(): unknown {
     return {
-      timeRange:   this.TIME_RANGE.value,
-      teamFilter:  this.TEAM_FILTER.value,
-      minPasses:   this.MIN_PASSES.value,
-      showFailed:  this.SHOW_FAILED.checked
+      teamFilter: this.TEAM_FILTER.value,
+      minPasses:  this.MIN_PASSES.value,
+      showFailed: this.SHOW_FAILED.checked
     };
   }
 
   restoreState(state: unknown): void {
     if (typeof state !== "object" || state === null) return;
     let s = state as any;
-    if ("timeRange"  in s) this.TIME_RANGE.value    = s.timeRange;
     if ("teamFilter" in s) this.TEAM_FILTER.value   = s.teamFilter;
     if ("minPasses"  in s) this.MIN_PASSES.value    = s.minPasses;
     if ("showFailed" in s) this.SHOW_FAILED.checked = s.showFailed;
@@ -59,15 +55,12 @@ export default class PassesNetController implements TabController {
   }
 
   showTimeline(): boolean {
-    return true;
+    return false;
   }
 
   getCommand(): PassesNetRendererCommand {
-    const FADE_SECONDS = 5;
-
     let logRange = window.log.getTimestampRange();
-    let [start, end]: [number, number] =
-      this.TIME_RANGE.value === "visible" ? window.selection.getTimelineRange() : [logRange[0], logRange[1]];
+    let [start, end]: [number, number] = [logRange[0], logRange[1]];
 
     // Average tracking positions — cached by [start, end]
     const cacheKey = `${start},${end}`;
@@ -77,9 +70,9 @@ export default class PassesNetController implements TabController {
     }
     const avgPos = this.avgPosCache;
 
-    let actions      = readSoccerActions(start, end);
+    let actions       = readSoccerActions(start, end);
     let teamFilterNum = this.TEAM_FILTER.value !== "all" ? parseInt(this.TEAM_FILTER.value) : -1;
-    let minPasses    = Math.max(1, parseInt(this.MIN_PASSES.value) || 1);
+    let minPasses     = Math.max(1, parseInt(this.MIN_PASSES.value) || 1);
 
     // Per-player action count (for node sizing)
     let actionCount = new Map<number, number>();
@@ -167,24 +160,12 @@ export default class PassesNetController implements TabController {
       }
     }
 
-    // Live positions + fading arrows
-    let renderTime    = window.selection.getRenderTime() ?? logRange[0];
-    let livePositions = readPlayerPositions(renderTime);
-    let recentPasses  = readRecentPasses(renderTime, FADE_SECONDS);
-
-    if (teamFilterNum !== -1) {
-      livePositions = livePositions.filter((p) => p.teamId === teamFilterNum);
-      recentPasses  = recentPasses.filter((p)  => p.teamId === teamFilterNum);
-    }
-
     return {
       nodes,
       edges,
       failedEdges,
       showFailedPasses: this.SHOW_FAILED.checked,
-      maxEdgeCount,
-      livePositions,
-      recentPasses
+      maxEdgeCount
     };
   }
 }

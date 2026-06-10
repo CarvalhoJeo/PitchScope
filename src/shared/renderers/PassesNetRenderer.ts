@@ -6,7 +6,6 @@
 // at the root directory of this project.
 
 import { PITCH_ASPECT_RATIO, TEAM_COLORS } from "../SoccerTypes";
-import { PlayerPosition, RecentPass } from "../soccer/SoccerLogReader";
 import { drawSoccerPitch, pitchToCanvas } from "./soccer/SoccerPitch";
 import { ZoomPanState } from "./soccer/ZoomPan";
 import TabRenderer from "./TabRenderer";
@@ -32,8 +31,6 @@ export interface PassesNetRendererCommand {
   failedEdges: PassesNetEdge[];
   showFailedPasses: boolean;
   maxEdgeCount: number;
-  livePositions: PlayerPosition[];
-  recentPasses: RecentPass[];
 }
 
 export default class PassesNetRenderer implements TabRenderer {
@@ -128,7 +125,7 @@ export default class PassesNetRenderer implements TabRenderer {
       ctx.lineWidth = lineWidth;
       ctx.stroke();
 
-      // Arrow head
+      // Arrowhead at midpoint
       let angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
       let arrowSize = 8;
       let midX = (from[0] + to[0]) / 2;
@@ -140,6 +137,18 @@ export default class PassesNetRenderer implements TabRenderer {
       ctx.closePath();
       ctx.fillStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
       ctx.fill();
+
+      // Count label at midpoint
+      ctx.save();
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "rgba(0,0,0,0.5)";
+      ctx.lineWidth = 2;
+      ctx.strokeText(edge.count.toString(), midX, midY);
+      ctx.fillText(edge.count.toString(), midX, midY);
+      ctx.restore();
     });
 
     // Draw failed pass edges (dashed, lower opacity, thinner)
@@ -165,41 +174,6 @@ export default class PassesNetRenderer implements TabRenderer {
       });
     }
 
-    // Fading pass-event arrows (age=0 bright/thick → age=1 transparent/thin)
-    command.recentPasses.forEach((pass) => {
-      let alpha = (1 - pass.age) * 0.9;
-      if (alpha < 0.05) return;
-      let alphaHex = Math.round(alpha * 255).toString(16).padStart(2, "0");
-      let color = TEAM_COLORS[pass.teamId] ?? "#ffffff";
-      let from = pitchToCanvas(pass.startX, pass.startY, W, H);
-      let to   = pitchToCanvas(pass.endX,   pass.endY,   W, H);
-
-      // Line
-      ctx.beginPath();
-      ctx.moveTo(from[0], from[1]);
-      ctx.lineTo(to[0], to[1]);
-      ctx.strokeStyle = color + alphaHex;
-      ctx.lineWidth = 1 + (1 - pass.age) * 3;
-      ctx.stroke();
-
-      // Arrowhead at destination
-      let angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
-      let arrowSize = 10 * (1 - pass.age * 0.5);
-      ctx.beginPath();
-      ctx.moveTo(to[0], to[1]);
-      ctx.lineTo(to[0] - arrowSize * Math.cos(angle - Math.PI / 6), to[1] - arrowSize * Math.sin(angle - Math.PI / 6));
-      ctx.lineTo(to[0] - arrowSize * Math.cos(angle + Math.PI / 6), to[1] - arrowSize * Math.sin(angle + Math.PI / 6));
-      ctx.closePath();
-      ctx.fillStyle = color + alphaHex;
-      ctx.fill();
-
-      // Small dot at start (ball origin)
-      ctx.beginPath();
-      ctx.arc(from[0], from[1], 3, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff" + alphaHex;
-      ctx.fill();
-    });
-
     // Draw nodes
     command.nodes.forEach((node) => {
       let pos = nodePos.get(node.playerId);
@@ -221,19 +195,6 @@ export default class PassesNetRenderer implements TabRenderer {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(node.playerId.toString(), pos[0], pos[1]);
-    });
-
-    // Live position dots (current tracking position)
-    command.livePositions.forEach((live) => {
-      let livePos = pitchToCanvas(live.x, live.y, W, H);
-      let color = TEAM_COLORS[live.teamId] ?? "#aaaaaa";
-      ctx.beginPath();
-      ctx.arc(livePos[0], livePos[1], 6, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
     });
 
     ctx.restore();
