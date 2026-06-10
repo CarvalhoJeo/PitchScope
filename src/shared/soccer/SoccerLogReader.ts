@@ -143,6 +143,43 @@ export function readPlayerPositions(time: number): PlayerPosition[] {
 }
 
 /**
+ * Computes each tracked player's average position over [start, end].
+ * Uses all tracking samples in that range. Players with no samples are excluded.
+ */
+export function readPlayerAveragePositions(
+  start: number,
+  end: number
+): Map<number, { x: number; y: number; teamId: number }> {
+  const playerIds = getTrackedPlayerIds();
+  const result = new Map<number, { x: number; y: number; teamId: number }>();
+
+  for (const playerId of playerIds) {
+    const xData    = window.log.getNumber(`/TeamLocation/${playerId}/x`,       start, end);
+    const yData    = window.log.getNumber(`/TeamLocation/${playerId}/y`,       start, end);
+    const teamData = window.log.getNumber(`/TeamLocation/${playerId}/team_id`, start, end);
+
+    if (!xData || xData.values.length === 0) continue;
+    if (!yData || yData.values.length === 0) continue;
+
+    const n = Math.min(xData.values.length, yData.values.length);
+    let sumX = 0;
+    let sumY = 0;
+    for (let i = 0; i < n; i++) {
+      sumX += xData.values[i];
+      sumY += yData.values[i];
+    }
+
+    result.set(playerId, {
+      x: sumX / n,
+      y: sumY / n,
+      teamId: teamData && teamData.values.length > 0 ? teamData.values[0] : 0
+    });
+  }
+
+  return result;
+}
+
+/**
  * Returns successful pass events in the window [currentTime - fadeSeconds, currentTime],
  * annotated with their age (0 = just happened, 1 = about to disappear).
  * Used to draw fading pass-trajectory arrows on the pitch.
