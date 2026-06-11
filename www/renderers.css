@@ -874,10 +874,15 @@ table.metadata-table td.no-data {
 
 div.passes-net-settings {
   height: 100%;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 div.passes-net-edge-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 0 8px 8px;
 }
 
