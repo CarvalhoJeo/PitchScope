@@ -165,16 +165,6 @@ function sendAllPreferences() {
   });
   if (downloadWindow !== null && !downloadWindow.isDestroyed()) sendMessage(downloadWindow, "set-preferences", data);
   if (menuTemplate !== null) {
-    let autoString = "Default: " + getLiveModeName(data.liveMode);
-    (
-      (menuTemplate[1].submenu as Electron.MenuItemConstructorOptions[])[2]
-        .submenu as Electron.MenuItemConstructorOptions[]
-    )[0].label = autoString;
-    (
-      (menuTemplate[1].submenu as Electron.MenuItemConstructorOptions[])[3]
-        .submenu as Electron.MenuItemConstructorOptions[]
-    )[0].label = autoString;
-    (menuTemplate[0].submenu as Electron.MenuItemConstructorOptions[])[7].checked = data.userAssetsFolder !== null;
     let menu = Menu.buildFromTemplate(menuTemplate);
     Menu.setApplicationMenu(menu);
   }
