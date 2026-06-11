@@ -16,7 +16,6 @@ export default class PassesNetController implements TabController {
 
   private TEAM_FILTER: HTMLSelectElement;
   private MIN_PASSES: HTMLInputElement;
-  private SHOW_FAILED: HTMLInputElement;
   private EDGE_LIST: HTMLElement;
 
   private avgPosCache: Map<number, { x: number; y: number; teamId: number }> | null = null;
@@ -26,15 +25,13 @@ export default class PassesNetController implements TabController {
   constructor(root: HTMLElement) {
     this.TEAM_FILTER  = root.getElementsByClassName("team-filter")[0]          as HTMLSelectElement;
     this.MIN_PASSES   = root.getElementsByClassName("min-passes")[0]           as HTMLInputElement;
-    this.SHOW_FAILED  = root.getElementsByClassName("show-failed-passes")[0]   as HTMLInputElement;
     this.EDGE_LIST    = root.getElementsByClassName("passes-net-edge-list")[0] as HTMLElement;
   }
 
   saveState(): unknown {
     return {
       teamFilter: this.TEAM_FILTER.value,
-      minPasses:  this.MIN_PASSES.value,
-      showFailed: this.SHOW_FAILED.checked
+      minPasses:  this.MIN_PASSES.value
     };
   }
 
@@ -43,7 +40,6 @@ export default class PassesNetController implements TabController {
     let s = state as any;
     if ("teamFilter" in s) this.TEAM_FILTER.value   = s.teamFilter;
     if ("minPasses"  in s) this.MIN_PASSES.value    = s.minPasses;
-    if ("showFailed" in s) this.SHOW_FAILED.checked = s.showFailed;
   }
 
   refresh(): void {}
@@ -80,14 +76,14 @@ export default class PassesNetController implements TabController {
       actionCount.set(action.playerId, (actionCount.get(action.playerId) ?? 0) + 1);
     }
 
-    // Pass edges (successful) and failed pass edges
-    let edgeCounts       = new Map<string, { from: number; to: number; count: number; teamId: number }>();
-    let failedEdgeCounts = new Map<string, { from: number; to: number; count: number; teamId: number }>();
+    // Pass edges (successful only)
+    let edgeCounts = new Map<string, { from: number; to: number; count: number; teamId: number }>();
     let n = actions.length;
 
     for (let i = 0; i < n; i++) {
       const action = actions[i];
       if (!PASS_ACTION_IDS.includes(action.actionTypeId)) continue;
+      if (action.resultId !== 1) continue;
       if (teamFilterNum !== -1 && action.teamId !== teamFilterNum) continue;
 
       let receiver: number | null = null;
@@ -102,14 +98,11 @@ export default class PassesNetController implements TabController {
       if (!avgPos.has(action.playerId) || !avgPos.has(receiver)) continue;
 
       const key = `${action.playerId}-${receiver}`;
-      const isSuccess = action.resultId === 1;
-      const target = isSuccess ? edgeCounts : failedEdgeCounts;
-
-      const existing = target.get(key);
+      const existing = edgeCounts.get(key);
       if (existing) {
         existing.count++;
       } else {
-        target.set(key, { from: action.playerId, to: receiver, count: 1, teamId: action.teamId });
+        edgeCounts.set(key, { from: action.playerId, to: receiver, count: 1, teamId: action.teamId });
       }
     }
 
@@ -128,19 +121,11 @@ export default class PassesNetController implements TabController {
 
     // Build edges
     let edges: PassesNetEdge[] = [];
-    let failedEdges: PassesNetEdge[] = [];
     let maxEdgeCount = 0;
 
     edgeCounts.forEach((e) => {
       if (e.count >= minPasses) {
         edges.push({ fromPlayer: e.from, toPlayer: e.to, count: e.count, teamId: e.teamId });
-        if (e.count > maxEdgeCount) maxEdgeCount = e.count;
-      }
-    });
-
-    failedEdgeCounts.forEach((e) => {
-      if (e.count >= minPasses) {
-        failedEdges.push({ fromPlayer: e.from, toPlayer: e.to, count: e.count, teamId: e.teamId });
         if (e.count > maxEdgeCount) maxEdgeCount = e.count;
       }
     });
@@ -163,8 +148,6 @@ export default class PassesNetController implements TabController {
     return {
       nodes,
       edges,
-      failedEdges,
-      showFailedPasses: this.SHOW_FAILED.checked,
       maxEdgeCount
     };
   }

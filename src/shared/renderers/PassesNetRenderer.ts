@@ -28,8 +28,6 @@ export interface PassesNetEdge {
 export interface PassesNetRendererCommand {
   nodes: PassesNetNode[];
   edges: PassesNetEdge[];
-  failedEdges: PassesNetEdge[];
-  showFailedPasses: boolean;
   maxEdgeCount: number;
 }
 
@@ -107,6 +105,9 @@ export default class PassesNetRenderer implements TabRenderer {
       nodePos.set(n.playerId, pitchToCanvas(n.avgX, n.avgY, W, H));
     });
 
+    // Detect bidirectional pairs so we can bow the two arrows in opposite directions
+    let edgeKeys = new Set(command.edges.map((e) => `${e.fromPlayer}-${e.toPlayer}`));
+
     // Draw edges
     let maxCount = command.maxEdgeCount || 1;
     command.edges.forEach((edge) => {
@@ -114,65 +115,71 @@ export default class PassesNetRenderer implements TabRenderer {
       let to = nodePos.get(edge.toPlayer);
       if (!from || !to) return;
 
+      const dx = to[0] - from[0];
+      const dy = to[1] - from[1];
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const midX = (from[0] + to[0]) / 2;
+      const midY = (from[1] + to[1]) / 2;
+      const angle = Math.atan2(dy, dx);
+
       let color = TEAM_COLORS[edge.teamId] ?? "#aaaaaa";
       let alpha = 0.3 + 0.5 * (edge.count / maxCount);
       let lineWidth = 1 + (edge.count / maxCount) * 8;
+      let strokeColor = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
 
+      // Bidirectional → bow this arrow into a quadratic-Bezier arc, perpendicular to
+      // direction of travel.  The reverse edge bows the opposite way, so the two
+      // arrows separate cleanly even with thick lines.  Apex height scales with
+      // line width so thick arrows still get visual breathing room.
+      const hasReverse = edgeKeys.has(`${edge.toPlayer}-${edge.fromPlayer}`);
+      const arcHeight = hasReverse && len > 0 ? Math.max(14, lineWidth * 1.6 + 6) : 0;
+
+      // Apex of the arc = midpoint pushed perpendicular (right of direction of travel)
+      const perpX = len > 0 ? -dy / len : 0;
+      const perpY = len > 0 ?  dx / len : 0;
+      const apexX = midX + perpX * arcHeight;
+      const apexY = midY + perpY * arcHeight;
+
+      // Draw straight line or quadratic-Bezier arc.  Control point chosen so the
+      // curve's t=0.5 point lands exactly on (apexX, apexY): C = 2*apex - midpoint.
       ctx.beginPath();
       ctx.moveTo(from[0], from[1]);
-      ctx.lineTo(to[0], to[1]);
-      ctx.strokeStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
+      if (arcHeight > 0) {
+        ctx.quadraticCurveTo(2 * apexX - midX, 2 * apexY - midY, to[0], to[1]);
+      } else {
+        ctx.lineTo(to[0], to[1]);
+      }
+      ctx.strokeStyle = strokeColor;
       ctx.lineWidth = lineWidth;
       ctx.stroke();
 
-      // Arrowhead at midpoint
-      let angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
-      let arrowSize = 8;
-      let midX = (from[0] + to[0]) / 2;
-      let midY = (from[1] + to[1]) / 2;
+      // Arrowhead at the apex.  Tangent at t=0.5 of a symmetric quadratic Bezier
+      // equals the straight-line direction, so `angle` is already correct.
+      const arrowSize = Math.max(8, lineWidth + 4);
       ctx.beginPath();
-      ctx.moveTo(midX, midY);
-      ctx.lineTo(midX - arrowSize * Math.cos(angle - Math.PI / 6), midY - arrowSize * Math.sin(angle - Math.PI / 6));
-      ctx.lineTo(midX - arrowSize * Math.cos(angle + Math.PI / 6), midY - arrowSize * Math.sin(angle + Math.PI / 6));
+      ctx.moveTo(apexX, apexY);
+      ctx.lineTo(apexX - arrowSize * Math.cos(angle - Math.PI / 6), apexY - arrowSize * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(apexX - arrowSize * Math.cos(angle + Math.PI / 6), apexY - arrowSize * Math.sin(angle + Math.PI / 6));
       ctx.closePath();
-      ctx.fillStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
+      ctx.fillStyle = strokeColor;
       ctx.fill();
 
-      // Count label at midpoint
+      // Count label — sit just past the apex on the outside of the curve so it
+      // never overlaps the arrow body or the partner's label.
+      const labelOffset = arcHeight > 0 ? 9 : 0;
+      const labelX = apexX + perpX * labelOffset;
+      const labelY = apexY + perpY * labelOffset;
       ctx.save();
-      ctx.font = "bold 10px sans-serif";
+      ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "rgba(0,0,0,0.5)";
-      ctx.lineWidth = 2;
-      ctx.strokeText(edge.count.toString(), midX, midY);
-      ctx.fillText(edge.count.toString(), midX, midY);
+      ctx.strokeStyle = "rgba(0,0,0,0.75)";
+      ctx.lineWidth = 3;
+      ctx.strokeText(edge.count.toString(), labelX, labelY);
+      ctx.fillText(edge.count.toString(), labelX, labelY);
       ctx.restore();
     });
-
-    // Draw failed pass edges (dashed, lower opacity, thinner)
-    if (command.showFailedPasses) {
-      command.failedEdges.forEach((edge) => {
-        let from = nodePos.get(edge.fromPlayer);
-        let to   = nodePos.get(edge.toPlayer);
-        if (!from || !to) return;
-
-        let color     = TEAM_COLORS[edge.teamId] ?? "#aaaaaa";
-        let alpha     = Math.min(0.4, 0.15 + 0.25 * (edge.count / maxCount));
-        let lineWidth = 1 + (edge.count / maxCount) * 3;
-
-        ctx.save();
-        ctx.setLineDash([6, 4]);
-        ctx.beginPath();
-        ctx.moveTo(from[0], from[1]);
-        ctx.lineTo(to[0], to[1]);
-        ctx.strokeStyle = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
-        ctx.lineWidth   = lineWidth;
-        ctx.stroke();
-        ctx.restore();
-      });
-    }
 
     // Draw nodes
     command.nodes.forEach((node) => {
