@@ -40,7 +40,7 @@ import { ensureThemeContrast } from "../../shared/Colors";
 import ExportOptions from "../../shared/ExportOptions";
 import LineGraphFilter from "../../shared/LineGraphFilter";
 import NamedMessage from "../../shared/NamedMessage";
-import Preferences, { DEFAULT_PREFS, getLiveModeName, LiveMode, mergePreferences } from "../../shared/Preferences";
+import Preferences, { DEFAULT_PREFS, getLiveModeName, mergePreferences } from "../../shared/Preferences";
 import { SourceListConfig, SourceListItemState, SourceListTypeMemory } from "../../shared/SourceListConfig";
 import TabType, { getAllTabTypes, getDefaultTabTitle, getTabAccelerator, getTabIcon } from "../../shared/TabType";
 import { BUILD_DATE, COPYRIGHT, DISTRIBUTION, Distribution } from "../../shared/buildConstants";
@@ -71,10 +71,7 @@ import {
 import StateTracker, { ApplicationState, SatelliteWindowState, WindowState } from "./StateTracker";
 import UpdateChecker from "./UpdateChecker";
 import { VideoProcessor } from "./VideoProcessor";
-import { XRControls } from "./XRControls";
-import { XRServer } from "./XRServer";
-import { getAssetDownloadStatus, startAssetDownloadLoop } from "./assetDownloader";
-import { createAssetFolders, getUserAssetsPath, loadAssets } from "./assetLoader";
+import { getUserAssetsPath } from "./assetLoader";
 import {
   delayBetaSurvey,
   isAlpha,
@@ -85,7 +82,6 @@ import {
   saveBetaWelcomeComplete,
   shouldPromptBetaSurvey
 } from "./betaUtil";
-import { getOwletDownloadStatus, startOwletDownloadLoop } from "./owletDownloadLoop";
 import { checkHootIsPro, convertHoot, CTRE_LICENSE_URL } from "./owletInterface";
 
 // Dynamically load lzma-native to handle platforms without prebuilt binaries
@@ -117,7 +113,6 @@ let advantageScopeAssets: AdvantageScopeAssets = {
   joysticks: [],
   loadFailures: []
 };
-XRServer.assetsSupplier = () => advantageScopeAssets;
 
 // Live RLOG variables
 let rlogSockets: { [id: number]: net.Socket } = {};
@@ -213,13 +208,6 @@ function sendActiveSatellites() {
     sendMessage(window, "set-active-satellites", activeSatellites);
   });
 }
-
-// Send XR state to all hub windows
-XRControls.addSourceUUIDCallback((uuid) => {
-  hubWindows.forEach((window) => {
-    sendMessage(window, "set-active-xr-uuid", uuid);
-  });
-});
 
 /**
  * Process a message from a hub window.
@@ -1312,36 +1300,6 @@ async function handleHubMessage(window: BrowserWindow, message: NamedMessage) {
         slider.value = Math.round(message.data * slider.maxValue);
       }
       break;
-
-    case "open-xr":
-      XRControls.open(message.data, window);
-      break;
-
-    case "confirm-xr-close":
-      {
-        dialog
-          .showMessageBox(window, {
-            type: "question",
-            title: "Alert",
-            message: "Stop XR Server?",
-            detail: "Closing this tab will stop the XR server and disconnect all devices.",
-            buttons: ["Don't Close", "Close"],
-            defaultId: 1,
-            icon: WINDOW_ICON
-          })
-          .then((response) => {
-            if (response.response === 1) {
-              sendMessage(window, "close-tab", true);
-              XRControls.close();
-            }
-          });
-      }
-      break;
-
-    case "update-xr-command":
-      XRServer.setHubCommand(message.data);
-      break;
-
     default:
       console.warn("Unknown message from hub renderer process", message);
       break;
@@ -1888,56 +1846,6 @@ function setupMenu() {
             shell.openPath(getUserAssetsPath());
           }
         },
-        {
-          label: "Use Custom Assets Folder",
-          type: "checkbox",
-          async click(item) {
-            const isCustom = item.checked;
-            let prefs: Preferences = jsonfile.readFileSync(PREFS_FILENAME);
-            if (isCustom) {
-              let result = await dialog.showOpenDialog({
-                title: "Select folder containing custom AdvantageScope assets",
-                buttonLabel: "Open",
-                properties: ["openDirectory", "createDirectory", "dontAddToRecent"]
-              });
-              if (result.filePaths.length >= 1) {
-                prefs.userAssetsFolder = result.filePaths[0];
-              }
-            } else {
-              prefs.userAssetsFolder = null;
-            }
-            jsonfile.writeFileSync(PREFS_FILENAME, prefs);
-            advantageScopeAssets = loadAssets();
-            sendAllPreferences();
-            sendAssets();
-          }
-        },
-        {
-          label: "Asset Download Status...",
-          click() {
-            dialog.showMessageBox({
-              type: "info",
-              title: "About",
-              message: "Asset Download Status",
-              detail: getAssetDownloadStatus(),
-              buttons: ["Close"],
-              icon: WINDOW_ICON
-            });
-          }
-        },
-        {
-          label: "Owlet Download Status...",
-          click() {
-            dialog.showMessageBox({
-              type: "info",
-              title: "About",
-              message: "Owlet Download Status",
-              detail: getOwletDownloadStatus(),
-              buttons: ["Close"],
-              icon: WINDOW_ICON
-            });
-          }
-        },
         ...(isMac
           ? ([
               { type: "separator" },
@@ -1969,7 +1877,7 @@ function setupMenu() {
                 filters: [
                   {
                     name: "Log files",
-                    extensions: ["rlog", "wpilog", "wpilogxz", "dslog", "dsevents", "hoot", "revlog", "log", "csv", "spadl", "tracking"]
+                    extensions: ["csv", "spadl", "tracking"]
                   }
                 ],
                 defaultPath: getDefaultLogPath()
@@ -1994,7 +1902,7 @@ function setupMenu() {
                 filters: [
                   {
                     name: "Log files",
-                    extensions: ["rlog", "wpilog", "wpilogxz", "dslog", "dsevents", "hoot", "revlog", "log", "csv", "spadl", "tracking"]
+                    extensions: ["csv", "spadl", "tracking"]
                   }
                 ],
                 defaultPath: getDefaultLogPath()
@@ -2005,129 +1913,6 @@ function setupMenu() {
                 }
               });
           }
-        },
-        {
-          label: "Connect to Robot",
-          type: "submenu",
-          submenu: [
-            {
-              label: "Default",
-              accelerator: "CmdOrCtrl+K",
-              click(_, baseWindow) {
-                const window = baseWindow as BrowserWindow | undefined;
-                if (window === undefined || !hubWindows.includes(window)) return;
-                sendMessage(window, "start-live", false);
-              }
-            },
-            { type: "separator" },
-            ...(["nt4", "nt4-akit", "phoenix", "rlog", "ftcdashboard"] as const).map((liveMode: LiveMode) => {
-              let item: Electron.MenuItemConstructorOptions = {
-                label: getLiveModeName(liveMode),
-                click(_, baseWindow) {
-                  const window = baseWindow as BrowserWindow | undefined;
-                  if (window === undefined || !hubWindows.includes(window)) return;
-                  let prefs: Preferences = jsonfile.readFileSync(PREFS_FILENAME);
-                  prefs.liveMode = liveMode;
-                  jsonfile.writeFileSync(PREFS_FILENAME, prefs);
-                  sendAllPreferences();
-                  sendMessage(window, "start-live", false);
-                }
-              };
-              return item;
-            })
-          ]
-        },
-        {
-          label: "Connect to Simulator",
-          type: "submenu",
-          submenu: [
-            {
-              label: "Default",
-              accelerator: "CmdOrCtrl+Shift+K",
-              click(_, baseWindow) {
-                const window = baseWindow as BrowserWindow | undefined;
-                if (window === undefined || !hubWindows.includes(window)) return;
-                sendMessage(window, "start-live", true);
-              }
-            },
-            { type: "separator" },
-            ...(["nt4", "nt4-akit", "phoenix", "rlog", "ftcdashboard"] as const).map((liveMode: LiveMode) => {
-              let item: Electron.MenuItemConstructorOptions = {
-                label: getLiveModeName(liveMode),
-                click(_, baseWindow) {
-                  const window = baseWindow as BrowserWindow | undefined;
-                  if (window === undefined || !hubWindows.includes(window)) return;
-                  let prefs: Preferences = jsonfile.readFileSync(PREFS_FILENAME);
-                  prefs.liveMode = liveMode;
-                  jsonfile.writeFileSync(PREFS_FILENAME, prefs);
-                  sendAllPreferences();
-                  sendMessage(window, "start-live", true);
-                }
-              };
-              return item;
-            })
-          ]
-        },
-        {
-          label: "Download Logs...",
-          accelerator: "CmdOrCtrl+D",
-          click(_, baseWindow) {
-            const window = baseWindow as BrowserWindow | undefined;
-            if (window === undefined) return;
-            openDownload(window);
-          }
-        },
-        { type: "separator" },
-        {
-          label: "Use USB roboRIO Address",
-          type: "checkbox",
-          checked: false,
-          click(item) {
-            usingUsb = item.checked;
-            sendAllPreferences();
-          }
-        },
-        { type: "separator" },
-        {
-          label: "Export Data...",
-          accelerator: "CmdOrCtrl+E",
-          click(_, baseWindow) {
-            const window = baseWindow as BrowserWindow | undefined;
-            if (window === undefined || !hubWindows.includes(window)) return;
-            sendMessage(window, "start-export");
-          }
-        },
-        {
-          label: "Publish NT Data",
-          submenu: [
-            {
-              label: "Connect to Robot",
-              accelerator: "CmdOrCtrl+P",
-              click(_, baseWindow) {
-                const window = baseWindow as BrowserWindow | undefined;
-                if (window === undefined || !hubWindows.includes(window)) return;
-                sendMessage(window, "start-publish", false);
-              }
-            },
-            {
-              label: "Connect to Simulator",
-              accelerator: "CmdOrCtrl+Shift+P",
-              click(_, baseWindow) {
-                const window = baseWindow as BrowserWindow | undefined;
-                if (window === undefined || !hubWindows.includes(window)) return;
-                sendMessage(window, "start-publish", true);
-              }
-            },
-            {
-              label: "Stop Publishing",
-              accelerator: "CmdOrCtrl+Alt+P",
-              click(_, baseWindow) {
-                const window = baseWindow as BrowserWindow | undefined;
-                if (window === undefined || !hubWindows.includes(window)) return;
-                sendMessage(window, "stop-publish");
-              }
-            }
-          ]
         },
         { type: "separator" },
         {
@@ -2430,42 +2215,7 @@ function setupMenu() {
             },
             { type: "separator" }
           ]
-        },
-    {
-      role: "help",
-      submenu: [
-        {
-          label: "Report a Problem",
-          click() {
-            shell.openExternal("https://github.com/" + GITHUB_REPOSITORY + "/issues");
-          }
-        },
-        {
-          label: "Contact Us",
-          click() {
-            shell.openExternal("mailto:software@team6328.org");
-          }
-        },
-        {
-          label: "GitHub Repository",
-          click() {
-            shell.openExternal("https://github.com/" + GITHUB_REPOSITORY);
-          }
-        },
-        {
-          label: "WPILib Documentation",
-          click() {
-            shell.openExternal("https://docs.wpilib.org");
-          }
-        },
-        {
-          label: "Littleton Robotics",
-          click() {
-            shell.openExternal("https://littletonrobotics.org");
-          }
         }
-      ]
-    }
   ];
 
   const menu = Menu.buildFromTemplate(menuTemplate);
@@ -3447,22 +3197,6 @@ app.whenReady().then(() => {
     jsonfile.writeFileSync(PREFS_FILENAME, prefs);
     nativeTheme.themeSource = prefs.theme;
   }
-
-  // Load assets
-  createAssetFolders();
-  startAssetDownloadLoop(() => {
-    advantageScopeAssets = loadAssets();
-    sendAssets();
-  });
-  setInterval(() => {
-    // Periodically load assets in case they are updated
-    advantageScopeAssets = loadAssets();
-    sendAssets();
-  }, 5000);
-  advantageScopeAssets = loadAssets();
-
-  // Start owlet download
-  startOwletDownloadLoop();
 
   // Create menu and windows
   setupMenu();

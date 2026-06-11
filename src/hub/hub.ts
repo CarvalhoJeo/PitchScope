@@ -355,7 +355,7 @@ function startHistorical(path: string, clear = true, merge = false) {
     (() => {
       const SOCCER_EXTS = [".spadl", ".tracking"];
       const isSoccer = SOCCER_EXTS.some((ext) => path.toLowerCase().endsWith(ext));
-      return (merge && !isSoccer) ? "/" + MERGE_PREFIX + (historicalSources.length - 1).toString() : "";
+      return merge && !isSoccer ? "/" + MERGE_PREFIX + (historicalSources.length - 1).toString() : "";
     })(),
     (status: HistoricalDataSourceStatus) => {
       if (historicalSources.length === 1) {
@@ -765,18 +765,6 @@ async function handleMainMessage(message: NamedMessage) {
         });
       }
       break;
-
-    case "start-live":
-      if (isExporting) {
-        window.sendMainMessage("error", {
-          title: "Cannot connect",
-          content: "Please wait for the export to finish, then try again."
-        });
-      } else {
-        startLive(message.data);
-      }
-      break;
-
     case "start-publish":
       if (liveActive) {
         window.sendMainMessage("error", {
