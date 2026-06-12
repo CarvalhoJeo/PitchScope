@@ -58,83 +58,6 @@ export default class PassesNetRenderer implements TabRenderer {
     return PITCH_ASPECT_RATIO;
   }
 
-  /** Node circle radius in canvas pixels, scaled by how active the player was. */
-  private nodeRadius(node: PassesNetNode): number {
-    return Math.max(10, Math.min(25, 10 + node.actionCount / 5));
-  }
-
-  /**
-   * Improves readability of the layout in two passes, mutating `nodePos`:
-   *   1. Spread — push each team's nodes out from the team centroid so the
-   *      formation fills the pitch instead of bunching toward midfield.
-   *   2. Relax — iteratively separate any node circles that still overlap.
-   * Positions are clamped to the pitch so nodes never leave the canvas.
-   */
-  private declutter(nodes: PassesNetNode[], nodePos: Map<number, [number, number]>, W: number, H: number): void {
-    if (nodes.length < 2) return;
-    const SPREAD = 1.3; // gentle fan-out from the team centroid (positions are now direction-normalized)
-    const PADDING = 4; // extra gap between separated circles (px)
-    const MAX_ITERATIONS = 80;
-
-    let clamp = (p: [number, number], r: number) => {
-      p[0] = Math.min(W - r, Math.max(r, p[0]));
-      p[1] = Math.min(H - r, Math.max(r, p[1]));
-    };
-
-    // 1. Spread each team out from its own centroid
-    let teams = new Map<number, PassesNetNode[]>();
-    nodes.forEach((node) => {
-      let group = teams.get(node.teamId);
-      if (group === undefined) teams.set(node.teamId, [node]);
-      else group.push(node);
-    });
-    teams.forEach((teamNodes) => {
-      if (teamNodes.length < 2) return;
-      let cx = 0;
-      let cy = 0;
-      teamNodes.forEach((node) => {
-        let p = nodePos.get(node.playerId)!;
-        cx += p[0];
-        cy += p[1];
-      });
-      cx /= teamNodes.length;
-      cy /= teamNodes.length;
-      teamNodes.forEach((node) => {
-        let p = nodePos.get(node.playerId)!;
-        p[0] = cx + (p[0] - cx) * SPREAD;
-        p[1] = cy + (p[1] - cy) * SPREAD;
-        clamp(p, this.nodeRadius(node));
-      });
-    });
-
-    // 2. Relax overlaps
-    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-      let moved = false;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          let a = nodePos.get(nodes[i].playerId)!;
-          let b = nodePos.get(nodes[j].playerId)!;
-          let minDist = this.nodeRadius(nodes[i]) + this.nodeRadius(nodes[j]) + PADDING;
-          let dx = b[0] - a[0];
-          let dy = b[1] - a[1];
-          let dist = Math.hypot(dx, dy) || 0.01;
-          if (dist < minDist) {
-            let shift = (minDist - dist) / 2;
-            let ux = dx / dist;
-            let uy = dy / dist;
-            a[0] -= ux * shift;
-            a[1] -= uy * shift;
-            b[0] += ux * shift;
-            b[1] += uy * shift;
-            moved = true;
-          }
-        }
-      }
-      nodes.forEach((node) => clamp(nodePos.get(node.playerId)!, this.nodeRadius(node)));
-      if (!moved) break;
-    }
-  }
-
   render(command: PassesNetRendererCommand): void {
     this.lastCommand = command;
     let containerWidth = this.CONTAINER.clientWidth;
@@ -183,10 +106,6 @@ export default class PassesNetRenderer implements TabRenderer {
       nodePos.set(n.playerId, pitchToCanvas(n.avgX, n.avgY, W, H));
     });
 
-    // De-clutter: average positions bunch toward midfield, so spread each
-    // team's nodes out from their centroid and then separate any overlaps.
-    this.declutter(command.nodes, nodePos, W, H);
-
     // Draw edges — one undirected line per player pair, weighted by total passes
     let maxCount = command.maxEdgeCount || 1;
     command.edges.forEach((edge) => {
@@ -228,7 +147,7 @@ export default class PassesNetRenderer implements TabRenderer {
       let pos = nodePos.get(node.playerId);
       if (!pos) return;
 
-      let radius = this.nodeRadius(node);
+      let radius = Math.max(10, Math.min(25, 10 + node.actionCount / 5));
       let color = TEAM_COLORS[node.teamId] ?? "#aaaaaa";
 
       ctx.beginPath();
