@@ -8,6 +8,7 @@
 import { ensureThemeContrast } from "../../shared/Colors";
 import LineGraphFilter from "../../shared/LineGraphFilter";
 import { SelectionMode } from "../../shared/Selection";
+import { PITCH_HEIGHT_M, PITCH_WIDTH_M } from "../../shared/SoccerTypes";
 import { getTrackingSmoothingRadius, smoothSeries } from "../../shared/soccer/SoccerLogReader";
 import { SourceListState } from "../../shared/SourceListConfig";
 import { AKIT_TIMESTAMP_KEYS, getEnabledKey, getLogValueText } from "../../shared/log/LogUtil";
@@ -543,6 +544,11 @@ export default class LineGraphController implements TabController {
             data.values = smoothSeries(data.values, smoothRadius);
             yData.values = smoothSeries(yData.values, smoothRadius);
           }
+          // Convert normalized 0-100 coordinates to metres (x spans 105 m, y
+          // spans 68 m) so the results are real units: Speed m/s, Acceleration
+          // m/s², Distance m. This also corrects the x/y scale distortion.
+          data.values = data.values.map((value) => (value / 100) * PITCH_WIDTH_M);
+          yData.values = yData.values.map((value) => (value / 100) * PITCH_HEIGHT_M);
           if (filter === LineGraphFilter.Distance) {
             let xs = data.values;
             let ys = yData.values;
