@@ -170,11 +170,12 @@ export default class PassesNetController implements TabController {
         let receiverPos = readTrackedPosition(receiver, action.timestamp);
         if (passerPos === null || receiverPos === null) continue;
 
-        // Teams switch ends each half, so mirror the attacking axis (x -> 100 - x)
-        // on even periods so every sample shares one attacking direction.
+        // Teams switch ends each half: it's a 180° rotation of the pitch, so
+        // mirror BOTH axes (x -> 100 - x, y -> 100 - y) on even periods to put
+        // every sample in one consistent direction.
         if (shouldFlipPeriod(action.periodId)) {
-          passerPos = { x: 100 - passerPos.x, y: passerPos.y, teamId: passerPos.teamId };
-          receiverPos = { x: 100 - receiverPos.x, y: receiverPos.y, teamId: receiverPos.teamId };
+          passerPos = { x: 100 - passerPos.x, y: 100 - passerPos.y, teamId: passerPos.teamId };
+          receiverPos = { x: 100 - receiverPos.x, y: 100 - receiverPos.y, teamId: receiverPos.teamId };
         }
         addSample(action.playerId, passerPos);
         addSample(receiver, receiverPos);

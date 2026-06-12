@@ -5,24 +5,19 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
+// Numeric values are explicit and stable: the hub looks up each tab's control
+// and renderer panels by id ("controller<value>" / "renderer<value>"), so
+// removing a tab type must not renumber the survivors. FRC-specific tabs have
+// been purged, leaving gaps in the sequence.
 enum TabType {
-  Documentation,
-  LineGraph,
-  Field2d,
-  Field3d,
-  Table,
-  Console,
-  Statistics,
-  Video,
-  Joysticks,
-  Swerve,
-  Mechanism,
-  Points,
-  Metadata,
-  SoccerField,
-  PassesNet,
-  ActionHeatmap,
-  EventTimeline
+  Documentation = 0,
+  LineGraph = 1,
+  Statistics = 6,
+  Video = 7,
+  SoccerField = 13,
+  PassesNet = 14,
+  ActionHeatmap = 15,
+  EventTimeline = 16
 }
 
 export default TabType;
@@ -34,16 +29,7 @@ export function getAllTabTypes(): TabType[] {
 export const LITE_COMPATIBLE_TABS = [
   TabType.Documentation,
   TabType.LineGraph,
-  TabType.Field2d,
-  TabType.Field3d,
-  TabType.Table,
-  TabType.Console,
   TabType.Statistics,
-  TabType.Joysticks,
-  TabType.Swerve,
-  TabType.Mechanism,
-  TabType.Points,
-  TabType.Metadata,
   TabType.SoccerField,
   TabType.PassesNet,
   TabType.ActionHeatmap,
@@ -56,28 +42,10 @@ export function getDefaultTabTitle(type: TabType): string {
       return "";
     case TabType.LineGraph:
       return "Line Graph";
-    case TabType.Field2d:
-      return "2D Field";
-    case TabType.Field3d:
-      return "3D Field";
-    case TabType.Table:
-      return "Table";
-    case TabType.Console:
-      return "Console";
     case TabType.Statistics:
       return "Statistics";
     case TabType.Video:
       return "Video";
-    case TabType.Joysticks:
-      return "Joysticks";
-    case TabType.Swerve:
-      return "Swerve";
-    case TabType.Mechanism:
-      return "Mechanism";
-    case TabType.Points:
-      return "Points";
-    case TabType.Metadata:
-      return "Metadata";
     case TabType.SoccerField:
       return "Soccer Field";
     case TabType.PassesNet:
@@ -97,28 +65,10 @@ export function getTabIcon(type: TabType): string {
       return "📖";
     case TabType.LineGraph:
       return "📉";
-    case TabType.Field2d:
-      return "🗺";
-    case TabType.Field3d:
-      return "👀";
-    case TabType.Table:
-      return "🔢";
-    case TabType.Console:
-      return "💬";
     case TabType.Statistics:
       return "📊";
     case TabType.Video:
       return "🎬";
-    case TabType.Joysticks:
-      return "🎮";
-    case TabType.Swerve:
-      return "🦀";
-    case TabType.Mechanism:
-      return "⚙️";
-    case TabType.Points:
-      return "📍";
-    case TabType.Metadata:
-      return "🔍";
     case TabType.SoccerField:
       return "⚽";
     case TabType.PassesNet:
@@ -140,28 +90,10 @@ export function getTabAccelerator(type: TabType): string {
       switch (type) {
         case TabType.LineGraph:
           return "G";
-        case TabType.Field2d:
-          return "2";
-        case TabType.Field3d:
-          return "3";
-        case TabType.Table:
-          return "T";
-        case TabType.Console:
-          return "C";
         case TabType.Statistics:
           return "S";
         case TabType.Video:
           return "V";
-        case TabType.Joysticks:
-          return "J";
-        case TabType.Swerve:
-          return "D";
-        case TabType.Mechanism:
-          return "M";
-        case TabType.Points:
-          return "P";
-        case TabType.Metadata:
-          return "I";
         case TabType.SoccerField:
           return "F";
         case TabType.PassesNet:

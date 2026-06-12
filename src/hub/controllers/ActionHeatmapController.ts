@@ -69,10 +69,12 @@ export default class ActionHeatmapController implements TabController {
     for (const action of actions) {
       if (selectedActionId !== -1 && action.actionTypeId !== selectedActionId) continue;
       if (selectedTeam !== -1 && action.teamId !== selectedTeam) continue;
-      // Teams switch ends each half; mirror the attacking axis on even periods
-      // so both halves overlay in one consistent direction.
-      let x = normalize && shouldFlipPeriod(action.periodId) ? 100 - action.startX : action.startX;
-      points.push({ x, y: action.startY });
+      // Teams switch ends each half (a 180° rotation), so mirror both axes on
+      // even periods to overlay both halves in one consistent direction.
+      let flip = normalize && shouldFlipPeriod(action.periodId);
+      let x = flip ? 100 - action.startX : action.startX;
+      let y = flip ? 100 - action.startY : action.startY;
+      points.push({ x, y });
     }
 
     let actionLabel =

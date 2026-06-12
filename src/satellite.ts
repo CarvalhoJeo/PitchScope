@@ -10,19 +10,10 @@ import NamedMessage from "./shared/NamedMessage";
 import Preferences from "./shared/Preferences";
 import Selection, { SelectionMode } from "./shared/Selection";
 import TabType, { getTabIcon } from "./shared/TabType";
-import ConsoleRenderer from "./shared/renderers/ConsoleRenderer";
 import DocumentationRenderer from "./shared/renderers/DocumentationRenderer";
-import Field2dRenderer from "./shared/renderers/Field2dRenderer";
-import Field3dRenderer from "./shared/renderers/Field3dRenderer";
-import JoysticksRenderer from "./shared/renderers/JoysticksRenderer";
 import LineGraphRenderer from "./shared/renderers/LineGraphRenderer";
-import MechanismRenderer from "./shared/renderers/MechanismRenderer";
-import MetadataRenderer from "./shared/renderers/MetadataRenderer";
-import PointsRenderer from "./shared/renderers/PointsRenderer";
 import StatisticsRenderer from "./shared/renderers/StatisticsRenderer";
-import SwerveRenderer from "./shared/renderers/SwerveRenderer";
 import TabRenderer from "./shared/renderers/TabRenderer";
-import TableRenderer from "./shared/renderers/TableRenderer";
 import VideoRenderer from "./shared/renderers/VideoRenderer";
 import { htmlEncode } from "./shared/util";
 
@@ -69,38 +60,11 @@ function updateVisualizer() {
     case TabType.LineGraph:
       renderer = new LineGraphRenderer(root, false);
       break;
-    case TabType.Field2d:
-      renderer = new Field2dRenderer(root);
-      break;
-    case TabType.Field3d:
-      renderer = new Field3dRenderer(root);
-      break;
-    case TabType.Table:
-      renderer = new TableRenderer(root, false);
-      break;
-    case TabType.Console:
-      renderer = new ConsoleRenderer(root, false);
-      break;
     case TabType.Statistics:
       renderer = new StatisticsRenderer(root);
       break;
     case TabType.Video:
       renderer = new VideoRenderer(root);
-      break;
-    case TabType.Joysticks:
-      renderer = new JoysticksRenderer(root);
-      break;
-    case TabType.Swerve:
-      renderer = new SwerveRenderer(root);
-      break;
-    case TabType.Mechanism:
-      renderer = new MechanismRenderer(root);
-      break;
-    case TabType.Points:
-      renderer = new PointsRenderer(root);
-      break;
-    case TabType.Metadata:
-      renderer = new MetadataRenderer(root);
       break;
   }
 }
@@ -157,27 +121,6 @@ window.addEventListener("message", (event) => {
             renderer.render(message.data.command);
             let aspectRatio = renderer.getAspectRatio();
             processAspectRatio(aspectRatio);
-
-            // Update table range
-            if (type === TabType.Table) {
-              let tableRenderer = renderer as TableRenderer;
-              window.sendMainMessage("add-table-range", {
-                uuid: tableRenderer.UUID,
-                range: tableRenderer.getTimestampRange()
-              });
-            }
-          }
-          break;
-
-        case "set-3d-camera":
-          if (type === TabType.Field3d) {
-            (renderer as Field3dRenderer).set3DCamera(message.data);
-          }
-          break;
-
-        case "edit-fov":
-          if (type === TabType.Field3d) {
-            (renderer as Field3dRenderer).setFov(message.data);
           }
           break;
 
@@ -209,15 +152,6 @@ function processAspectRatio(aspectRatio: number | null) {
   }
 }
 
-window.addEventListener("beforeunload", () => {
-  if (type === TabType.Table) {
-    let tableRenderer = renderer as TableRenderer;
-    window.sendMainMessage("add-table-range", {
-      uuid: tableRenderer.UUID,
-      range: null
-    });
-  }
-});
 
 window.addEventListener("keydown", (event) => {
   if (event.target !== document.body) return;

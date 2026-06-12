@@ -172,9 +172,10 @@ export function shouldFlipPeriod(period: number): boolean {
 
 /**
  * Each tracked player's average position over the whole match, direction-
- * normalized: x is mirrored on even periods so both halves share one attacking
- * direction (otherwise the halftime end-switch pulls everyone to the centre).
- * Players with no tracking samples are excluded.
+ * normalized: on even periods the pitch is rotated 180° (x -> 100 - x and
+ * y -> 100 - y) so both halves share one attacking direction (otherwise the
+ * halftime end-switch pulls everyone to the centre). Players with no tracking
+ * samples are excluded.
  */
 export function readPlayerNormalizedAveragePositions(): Map<number, { x: number; y: number; teamId: number }> {
   const result = new Map<number, { x: number; y: number; teamId: number }>();
@@ -195,9 +196,13 @@ export function readPlayerNormalizedAveragePositions(): Map<number, { x: number;
     let sumY = 0;
     for (let i = 0; i < n; i++) {
       let x = xData.values[i];
-      if (shouldFlipPeriod(stepValueAt(periodData, xData.timestamps[i]))) x = 100 - x;
+      let y = yData.values[i];
+      if (shouldFlipPeriod(stepValueAt(periodData, xData.timestamps[i]))) {
+        x = 100 - x;
+        y = 100 - y;
+      }
       sumX += x;
-      sumY += yData.values[i];
+      sumY += y;
     }
     result.set(playerId, {
       x: sumX / n,

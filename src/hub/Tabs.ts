@@ -10,43 +10,25 @@ import LineGraphFilter from "../shared/LineGraphFilter";
 import TabType, { getDefaultTabTitle, getTabIcon } from "../shared/TabType";
 import { getAutonomousKey, getEnabledKey } from "../shared/log/LogUtil";
 import ActionHeatmapRenderer from "../shared/renderers/ActionHeatmapRenderer";
-import ConsoleRenderer from "../shared/renderers/ConsoleRenderer";
 import DocumentationRenderer from "../shared/renderers/DocumentationRenderer";
 import EventTimelineRenderer from "../shared/renderers/EventTimelineRenderer";
-import Field2dRenderer from "../shared/renderers/Field2dRenderer";
-import Field3dRenderer from "../shared/renderers/Field3dRenderer";
-import JoysticksRenderer from "../shared/renderers/JoysticksRenderer";
 import LineGraphRenderer from "../shared/renderers/LineGraphRenderer";
-import MechanismRenderer from "../shared/renderers/MechanismRenderer";
-import MetadataRenderer from "../shared/renderers/MetadataRenderer";
 import PassesNetRenderer from "../shared/renderers/PassesNetRenderer";
-import PointsRenderer from "../shared/renderers/PointsRenderer";
 import SoccerFieldRenderer from "../shared/renderers/SoccerFieldRenderer";
 import StatisticsRenderer from "../shared/renderers/StatisticsRenderer";
-import SwerveRenderer from "../shared/renderers/SwerveRenderer";
 import TabRenderer, { NoopRenderer } from "../shared/renderers/TabRenderer";
-import TableRenderer from "../shared/renderers/TableRenderer";
 import VideoRenderer from "../shared/renderers/VideoRenderer";
 import { Units } from "../shared/units";
 import { clampValue } from "../shared/util";
 import ScrollSensor from "./ScrollSensor";
 import Timeline from "./Timeline";
 import ActionHeatmapController from "./controllers/ActionHeatmapController";
-import ConsoleController from "./controllers/ConsoleController";
 import EventTimelineController from "./controllers/EventTimelineController";
-import Field2dController from "./controllers/Field2dController";
-import Field3dController from "./controllers/Field3dController";
-import JoysticksController from "./controllers/JoysticksController";
 import LineGraphController from "./controllers/LineGraphController";
-import MechanismController from "./controllers/MechanismController";
-import MetadataController from "./controllers/MetadataController";
 import PassesNetController from "./controllers/PassesNetController";
-import PointsController from "./controllers/PointsController";
 import SoccerFieldController from "./controllers/SoccerFieldController";
 import StatisticsController from "./controllers/StatisticsController";
-import SwerveController from "./controllers/SwerveController";
 import TabController, { NoopController } from "./controllers/TabController";
-import TableController from "./controllers/TableController";
 import VideoController from "./controllers/VideoController";
 
 export default class Tabs {
@@ -93,17 +75,8 @@ export default class Tabs {
     // Set up tab configs
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Documentation, 0);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.LineGraph, undefined);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Table, 0);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Console, 0);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Statistics, undefined);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Field2d, undefined);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Field3d, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Video, 85);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Joysticks, 85);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Swerve, undefined);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Mechanism, undefined);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Points, undefined);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.Metadata, 0);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.SoccerField, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.PassesNet, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.ActionHeatmap, undefined);
@@ -304,8 +277,7 @@ export default class Tabs {
     // Add default tabs
     this.addTab(TabType.Documentation);
     this.addTab(TabType.LineGraph);
-    this.addTab(TabType.Field2d);
-    this.addTab(TabType.Field3d);
+    this.addTab(TabType.SoccerField);
     this.setSelected(1);
 
     // Scroll management
@@ -339,12 +311,6 @@ export default class Tabs {
         let activeSatellite = this.activeSatellites.includes(tab.controller.UUID);
         let activeXR = tab.controller.UUID === this.activeXRUUID;
         if (activeLocal || activeSatellite || activeXR) {
-          if (tab.type === TabType.Table) {
-            // Update range from renderer
-            let renderer = tab.renderer as TableRenderer;
-            let controller = tab.controller as TableController;
-            controller.addRendererRange(renderer.UUID, activeLocal ? renderer.getTimestampRange() : null);
-          }
           let command = tab.controller.getCommand();
           if (activeLocal) {
             tab.renderer.render(command);
@@ -479,15 +445,6 @@ export default class Tabs {
 
   /** Creates a new tab. */
   addTab(type: TabType) {
-    // Select existing metadata tab
-    if (type === TabType.Metadata) {
-      let existingIndex = this.tabList.findIndex((tab) => tab.type === TabType.Metadata);
-      if (existingIndex >= 0) {
-        this.setSelected(existingIndex);
-        return;
-      }
-    }
-
     // Add tab
     let controlsElement = document.getElementById("controller" + type.toString())?.cloneNode(true) as HTMLElement;
     let rendererElement = document.getElementById("renderer" + type.toString())?.cloneNode(true) as HTMLElement;
@@ -504,22 +461,6 @@ export default class Tabs {
         controller = new LineGraphController(controlsElement);
         renderer = new LineGraphRenderer(rendererElement, true);
         break;
-      case TabType.Field2d:
-        controller = new Field2dController(controlsElement);
-        renderer = new Field2dRenderer(rendererElement);
-        break;
-      case TabType.Field3d:
-        controller = new Field3dController(controlsElement);
-        renderer = new Field3dRenderer(rendererElement);
-        break;
-      case TabType.Table:
-        controller = new TableController(rendererElement);
-        renderer = new TableRenderer(rendererElement, true);
-        break;
-      case TabType.Console:
-        controller = new ConsoleController(rendererElement);
-        renderer = new ConsoleRenderer(rendererElement, true);
-        break;
       case TabType.Statistics:
         controller = new StatisticsController(controlsElement);
         renderer = new StatisticsRenderer(rendererElement);
@@ -527,26 +468,6 @@ export default class Tabs {
       case TabType.Video:
         controller = new VideoController(controlsElement);
         renderer = new VideoRenderer(rendererElement);
-        break;
-      case TabType.Joysticks:
-        controller = new JoysticksController(controlsElement);
-        renderer = new JoysticksRenderer(rendererElement);
-        break;
-      case TabType.Swerve:
-        controller = new SwerveController(controlsElement);
-        renderer = new SwerveRenderer(rendererElement);
-        break;
-      case TabType.Mechanism:
-        controller = new MechanismController(controlsElement);
-        renderer = new MechanismRenderer(rendererElement);
-        break;
-      case TabType.Points:
-        controller = new PointsController(controlsElement);
-        renderer = new PointsRenderer(rendererElement);
-        break;
-      case TabType.Metadata:
-        controller = new MetadataController();
-        renderer = new MetadataRenderer(rendererElement);
         break;
       case TabType.SoccerField:
         controller = new SoccerFieldController(controlsElement);
@@ -666,11 +587,6 @@ export default class Tabs {
   /** Updates the UUID for the tab broadcasting to XR. */
   setActiveXRUUID(uuid: string | null) {
     this.activeXRUUID = uuid;
-    this.tabList.forEach((tab) => {
-      if (tab.type === TabType.Field3d) {
-        (tab.controller as Field3dController).setXRActive(tab.controller.UUID === uuid);
-      }
-    });
   }
 
   /** Check whether the UUID is associated with a tab. */
@@ -721,28 +637,14 @@ export default class Tabs {
     }
   }
 
-  /** Switches the selected camera for the selected 3D field. */
-  set3DCamera(index: number) {
-    if (this.tabList[this.selectedTab].type === TabType.Field3d) {
-      (this.tabList[this.selectedTab].renderer as Field3dRenderer).set3DCamera(index);
-    }
-  }
+  /** No-op: the 3D field tab has been removed (kept for message compatibility). */
+  set3DCamera(_index: number) {}
 
-  /** Switches the orbit FOV for the selected 3D field. */
-  setFov(fov: number) {
-    if (this.tabList[this.selectedTab].type === TabType.Field3d) {
-      (this.tabList[this.selectedTab].renderer as Field3dRenderer).setFov(fov);
-    }
-  }
+  /** No-op: the 3D field tab has been removed (kept for message compatibility). */
+  setFov(_fov: number) {}
 
-  /** Switches the selected camera for the selected 3D field. */
-  addTableRange(controllerUUID: string, rendererUUID: string, range: [number, number] | null) {
-    this.tabList.forEach((tab) => {
-      if (tab.type === TabType.Table && tab.controller.UUID === controllerUUID) {
-        (this.tabList[this.selectedTab].controller as TableController).addRendererRange(rendererUUID, range);
-      }
-    });
-  }
+  /** No-op: the table tab has been removed (kept for message compatibility). */
+  addTableRange(_controllerUUID: string, _rendererUUID: string, _range: [number, number] | null) {}
 
   /** Returns whether the selected tab is a video which
    * is unlocked (and thus requires access to the left
