@@ -17,7 +17,6 @@ enum TabType {
   SoccerField = 13,
   PassesNet = 14,
   ActionHeatmap = 15,
-  EventTimeline = 16,
   PositionHeatmap = 17
 }
 
@@ -34,7 +33,6 @@ export const LITE_COMPATIBLE_TABS = [
   TabType.SoccerField,
   TabType.PassesNet,
   TabType.ActionHeatmap,
-  TabType.EventTimeline,
   TabType.PositionHeatmap
 ];
 
@@ -54,8 +52,6 @@ export function getDefaultTabTitle(type: TabType): string {
       return "Passes Net";
     case TabType.ActionHeatmap:
       return "Action Heatmap";
-    case TabType.EventTimeline:
-      return "Event Timeline";
     case TabType.PositionHeatmap:
       return "Position Heatmap";
     default:
@@ -79,8 +75,6 @@ export function getTabIcon(type: TabType): string {
       return "🕸";
     case TabType.ActionHeatmap:
       return "🌡";
-    case TabType.EventTimeline:
-      return "📅";
     case TabType.PositionHeatmap:
       return "🔥";
     default:
@@ -106,8 +100,6 @@ export function getTabAccelerator(type: TabType): string {
           return "N";
         case TabType.ActionHeatmap:
           return "H";
-        case TabType.EventTimeline:
-          return "E";
         case TabType.PositionHeatmap:
           return "Y";
         default:

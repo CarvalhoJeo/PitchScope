@@ -11,7 +11,6 @@ import TabType, { getDefaultTabTitle, getTabIcon } from "../shared/TabType";
 import { getAutonomousKey, getEnabledKey } from "../shared/log/LogUtil";
 import ActionHeatmapRenderer from "../shared/renderers/ActionHeatmapRenderer";
 import DocumentationRenderer from "../shared/renderers/DocumentationRenderer";
-import EventTimelineRenderer from "../shared/renderers/EventTimelineRenderer";
 import LineGraphRenderer from "../shared/renderers/LineGraphRenderer";
 import PassesNetRenderer from "../shared/renderers/PassesNetRenderer";
 import PositionHeatmapRenderer from "../shared/renderers/PositionHeatmapRenderer";
@@ -24,7 +23,6 @@ import { clampValue } from "../shared/util";
 import ScrollSensor from "./ScrollSensor";
 import Timeline from "./Timeline";
 import ActionHeatmapController from "./controllers/ActionHeatmapController";
-import EventTimelineController from "./controllers/EventTimelineController";
 import LineGraphController from "./controllers/LineGraphController";
 import PassesNetController from "./controllers/PassesNetController";
 import PositionHeatmapController from "./controllers/PositionHeatmapController";
@@ -83,7 +81,6 @@ export default class Tabs {
     this.FIXED_CONTROL_HEIGHTS.set(TabType.PositionHeatmap, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.PassesNet, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.ActionHeatmap, undefined);
-    this.FIXED_CONTROL_HEIGHTS.set(TabType.EventTimeline, undefined);
 
     // Hover and click handling
     let mouseDownInfo: [number, number] | null = null;
@@ -483,10 +480,6 @@ export default class Tabs {
       case TabType.ActionHeatmap:
         controller = new ActionHeatmapController(controlsElement);
         renderer = new ActionHeatmapRenderer(rendererElement);
-        break;
-      case TabType.EventTimeline:
-        controller = new EventTimelineController(controlsElement);
-        renderer = new EventTimelineRenderer(rendererElement);
         break;
       case TabType.PositionHeatmap:
         controller = new PositionHeatmapController(controlsElement);
