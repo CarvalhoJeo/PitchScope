@@ -1166,6 +1166,21 @@ async function handleHubMessage(window: BrowserWindow, message: NamedMessage) {
           );
           editAxisMenu.append(
             new MenuItem({
+              label: "Distance (X+Y)",
+              type: "checkbox",
+              checked: filter === LineGraphFilter.Distance,
+              click() {
+                sendMessage(window, "edit-axis", {
+                  legend: legend,
+                  lockedRange: lockedRange,
+                  unitConversion: unitConversion,
+                  filter: filter === LineGraphFilter.Distance ? LineGraphFilter.None : LineGraphFilter.Distance
+                });
+              }
+            })
+          );
+          editAxisMenu.append(
+            new MenuItem({
               type: "separator"
             })
           );

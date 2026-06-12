@@ -1027,6 +1027,17 @@ async function handleHubMessage(message: NamedMessage) {
               });
             }
           });
+          menuItems.push({
+            content: (filter === LineGraphFilter.Distance ? "\u2714 " : "") + "Distance (X+Y)",
+            callback() {
+              sendMessage(hubPort, "edit-axis", {
+                legend: legend,
+                lockedRange: lockedRange,
+                unitConversion: unitConversion,
+                filter: filter === LineGraphFilter.Distance ? LineGraphFilter.None : LineGraphFilter.Distance
+              });
+            }
+          });
           menuItems.push("-");
         }
 

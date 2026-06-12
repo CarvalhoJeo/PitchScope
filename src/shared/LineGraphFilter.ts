@@ -10,7 +10,8 @@ enum LineGraphFilter {
   Differentiate,
   Integrate,
   Speed,
-  Acceleration
+  Acceleration,
+  Distance
 }
 
 export default LineGraphFilter;

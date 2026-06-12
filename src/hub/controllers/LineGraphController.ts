@@ -227,6 +227,9 @@ export default class LineGraphController implements TabController {
       case LineGraphFilter.Acceleration:
         leftLabels.push("Acceleration");
         break;
+      case LineGraphFilter.Distance:
+        leftLabels.push("Distance");
+        break;
     }
     if (leftLabels.length > 0) {
       this.leftSourceList.setTitle("Left Axis [" + leftLabels.join(", ") + "]");
@@ -257,6 +260,9 @@ export default class LineGraphController implements TabController {
         break;
       case LineGraphFilter.Acceleration:
         rightLabels.push("Acceleration");
+        break;
+      case LineGraphFilter.Distance:
+        rightLabels.push("Distance");
         break;
     }
     if (rightLabels.length > 0) {
@@ -476,10 +482,19 @@ export default class LineGraphController implements TabController {
         setUnits(unitConversion.preset.to);
       }
 
-      // Speed/Acceleration combine the "/x" and "/y" fields of a coordinate
-      // pair into a single magnitude series. Each pair is processed from its
+      // Speed/Acceleration/Distance combine the "/x" and "/y" fields of a
+      // coordinate pair into a single series. Each pair is processed from its
       // "/x" field; the sibling "/y" must also be present on the same axis.
-      let isPairFilter = filter === LineGraphFilter.Speed || filter === LineGraphFilter.Acceleration;
+      let isPairFilter =
+        filter === LineGraphFilter.Speed ||
+        filter === LineGraphFilter.Acceleration ||
+        filter === LineGraphFilter.Distance;
+
+      // Sampling for the pair fetch. Distance accumulates from the start of the
+      // log (like Integrate); Speed/Acceleration need leading samples for the
+      // central difference (one for speed, two for acceleration).
+      let pairStart = filter === LineGraphFilter.Distance ? -Infinity : timeRange[0];
+      let pairOffset = filter === LineGraphFilter.Acceleration ? -2 : filter === LineGraphFilter.Speed ? -1 : 0;
 
       // Differentiate a value/timestamp series via central difference. Mirrors
       // the Differentiate filter: drops the leading sample so the result aligns
@@ -496,53 +511,58 @@ export default class LineGraphController implements TabController {
 
       // Process fields
       source.forEach((fieldItem) => {
-        // Resolve coordinate pair for Speed/Acceleration
+        // Resolve coordinate pair for Speed/Acceleration/Distance
         let yData: LogValueSetNumber | undefined = undefined;
         if (isPairFilter) {
           if (!fieldItem.logKey.endsWith("/x")) return; // process from "/x"; skip "/y" and scalars
           let yKey = fieldItem.logKey.slice(0, -2) + "/y";
           if (!source.some((item) => item.logKey === yKey)) return; // sibling not added to this axis
-          yData = window.log.getNumber(
-            yKey,
-            timeRange[0],
-            timeRange[1],
-            undefined,
-            filter === LineGraphFilter.Acceleration ? -2 : -1
-          );
+          yData = window.log.getNumber(yKey, pairStart, timeRange[1], undefined, pairOffset);
           if (yData === undefined) return;
         }
 
         let data = window.log.getNumber(
           fieldItem.logKey,
-          filter === LineGraphFilter.Integrate ? -Infinity : timeRange[0],
+          isPairFilter ? pairStart : filter === LineGraphFilter.Integrate ? -Infinity : timeRange[0],
           timeRange[1],
           undefined,
-          isPairFilter
-            ? filter === LineGraphFilter.Acceleration
-              ? -2
-              : -1
-            : filter === LineGraphFilter.Differentiate
-            ? -1
-            : 0
+          isPairFilter ? pairOffset : filter === LineGraphFilter.Differentiate ? -1 : 0
         );
         if (data === undefined) return;
 
-        // Combine x/y into speed (magnitude of velocity) or acceleration
-        // (rate of change of speed). Acceleration fetches an extra leading
-        // sample so the second derivative aligns to the start of the range.
+        // Combine x/y into a single series:
+        //  - Speed: magnitude of velocity (central difference)
+        //  - Acceleration: rate of change of speed (second central difference)
+        //  - Distance: cumulative path length travelled, from the start of the log
         if (isPairFilter && yData !== undefined) {
-          let vx = differentiate(data.values, data.timestamps);
-          let vy = differentiate(yData.values, yData.timestamps);
-          let length = Math.min(vx.values.length, vy.values.length);
-          let speedValues: number[] = [];
-          for (let i = 0; i < length; i++) {
-            speedValues.push(Math.hypot(vx.values[i], vy.values[i]));
-          }
-          if (filter === LineGraphFilter.Speed) {
-            data = { timestamps: vx.timestamps.slice(0, length), values: speedValues };
+          if (filter === LineGraphFilter.Distance) {
+            let xs = data.values;
+            let ys = yData.values;
+            let ts = data.timestamps;
+            let length = Math.min(xs.length, ys.length, ts.length);
+            let distValues: number[] = [];
+            let cumulative = 0;
+            let startIndex: number | undefined = undefined;
+            for (let i = 0; i < length; i++) {
+              if (i > 0) cumulative += Math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1]);
+              if (ts[i] > timeRange[0] && startIndex === undefined) startIndex = Math.max(0, i - 1);
+              distValues.push(cumulative);
+            }
+            data = { timestamps: ts.slice(startIndex, length), values: distValues.slice(startIndex) };
           } else {
-            let accel = differentiate(speedValues, vx.timestamps.slice(0, length));
-            data = { timestamps: accel.timestamps, values: accel.values };
+            let vx = differentiate(data.values, data.timestamps);
+            let vy = differentiate(yData.values, yData.timestamps);
+            let length = Math.min(vx.values.length, vy.values.length);
+            let speedValues: number[] = [];
+            for (let i = 0; i < length; i++) {
+              speedValues.push(Math.hypot(vx.values[i], vy.values[i]));
+            }
+            if (filter === LineGraphFilter.Speed) {
+              data = { timestamps: vx.timestamps.slice(0, length), values: speedValues };
+            } else {
+              let accel = differentiate(speedValues, vx.timestamps.slice(0, length));
+              data = { timestamps: accel.timestamps, values: accel.values };
+            }
           }
         }
 
