@@ -145,6 +145,23 @@ export function readPlayerPositions(time: number): PlayerPosition[] {
 }
 
 /**
+ * Reads a single player's tracked position at or before `time`.
+ * Returns null when the player has no tracking sample yet.
+ */
+export function readTrackedPosition(playerId: number, time: number): { x: number; y: number; teamId: number } | null {
+  const xData    = window.log.getNumber(`/TeamLocation/${playerId}/x`,       time, time);
+  const yData    = window.log.getNumber(`/TeamLocation/${playerId}/y`,       time, time);
+  const teamData = window.log.getNumber(`/TeamLocation/${playerId}/team_id`, time, time);
+  if (!xData || xData.values.length === 0) return null;
+  if (!yData || yData.values.length === 0) return null;
+  return {
+    x: xData.values[xData.values.length - 1],
+    y: yData.values[yData.values.length - 1],
+    teamId: teamData && teamData.values.length > 0 ? teamData.values[teamData.values.length - 1] : 0
+  };
+}
+
+/**
  * Computes each tracked player's average position over [start, end].
  * Uses all tracking samples in that range. Players with no samples are excluded.
  */
@@ -180,6 +197,29 @@ export function readPlayerAveragePositions(
   }
 
   return result;
+}
+
+/**
+ * Returns the IDs of the starting players — those present on the pitch at
+ * kickoff, inferred as players whose first tracking sample is at (or within a
+ * small tolerance of) the match start. Substitutes, who appear later, are
+ * excluded. Empty when there is no tracking data.
+ */
+export function getStartingPlayerIds(): Set<number> {
+  const starters = new Set<number>();
+  const playerIds = getTrackedPlayerIds();
+  if (playerIds.length === 0) return starters;
+
+  const [matchStart, matchEnd] = window.log.getTimestampRange();
+  const span = matchEnd - matchStart;
+  const edgeEps = Math.max(2, span * 0.005); // tolerance for "present at kickoff"
+
+  for (const playerId of playerIds) {
+    const timestamps = window.log.getTimestamps([`/TeamLocation/${playerId}/x`]);
+    if (timestamps.length === 0) continue;
+    if (timestamps[0] <= matchStart + edgeEps) starters.add(playerId);
+  }
+  return starters;
 }
 
 /**
