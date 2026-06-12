@@ -14,6 +14,7 @@ import DocumentationRenderer from "../shared/renderers/DocumentationRenderer";
 import EventTimelineRenderer from "../shared/renderers/EventTimelineRenderer";
 import LineGraphRenderer from "../shared/renderers/LineGraphRenderer";
 import PassesNetRenderer from "../shared/renderers/PassesNetRenderer";
+import PositionHeatmapRenderer from "../shared/renderers/PositionHeatmapRenderer";
 import SoccerFieldRenderer from "../shared/renderers/SoccerFieldRenderer";
 import StatisticsRenderer from "../shared/renderers/StatisticsRenderer";
 import TabRenderer, { NoopRenderer } from "../shared/renderers/TabRenderer";
@@ -26,6 +27,7 @@ import ActionHeatmapController from "./controllers/ActionHeatmapController";
 import EventTimelineController from "./controllers/EventTimelineController";
 import LineGraphController from "./controllers/LineGraphController";
 import PassesNetController from "./controllers/PassesNetController";
+import PositionHeatmapController from "./controllers/PositionHeatmapController";
 import SoccerFieldController from "./controllers/SoccerFieldController";
 import StatisticsController from "./controllers/StatisticsController";
 import TabController, { NoopController } from "./controllers/TabController";
@@ -78,6 +80,7 @@ export default class Tabs {
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Statistics, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Video, 85);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.SoccerField, undefined);
+    this.FIXED_CONTROL_HEIGHTS.set(TabType.PositionHeatmap, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.PassesNet, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.ActionHeatmap, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.EventTimeline, undefined);
@@ -484,6 +487,10 @@ export default class Tabs {
       case TabType.EventTimeline:
         controller = new EventTimelineController(controlsElement);
         renderer = new EventTimelineRenderer(rendererElement);
+        break;
+      case TabType.PositionHeatmap:
+        controller = new PositionHeatmapController(controlsElement);
+        renderer = new PositionHeatmapRenderer(rendererElement);
         break;
       default:
         controller = new NoopController();

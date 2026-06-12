@@ -162,6 +162,50 @@ export function readTrackedPosition(playerId: number, time: number): { x: number
 }
 
 /**
+ * Bins every tracked (x, y) sample for a player over [start, end] into a
+ * canvas-oriented density grid (gx from x, gy from flipped y), optionally
+ * direction-normalized (180° mirror on even periods). Increments `grid` in
+ * place and returns the number of samples added. Binning directly (rather than
+ * materializing a points array) keeps heavy tracking data cheap to aggregate.
+ * `playerKey` is the player base key, e.g. "/TeamLocation/7".
+ */
+export function binPlayerPositions(
+  playerKey: string,
+  start: number,
+  end: number,
+  normalize: boolean,
+  grid: Float32Array,
+  gridW: number,
+  gridH: number
+): number {
+  const xData = window.log.getNumber(playerKey + "/x", start, end);
+  const yData = window.log.getNumber(playerKey + "/y", start, end);
+  if (!xData || xData.values.length === 0) return 0;
+  if (!yData || yData.values.length === 0) return 0;
+
+  const periodData = normalize ? window.log.getNumber("/SPADL/period_id", -Infinity, Infinity) : undefined;
+  const n = Math.min(xData.values.length, yData.values.length);
+  let added = 0;
+  for (let i = 0; i < n; i++) {
+    let x = xData.values[i];
+    let y = yData.values[i];
+    if (normalize && shouldFlipPeriod(stepValueAt(periodData, xData.timestamps[i]))) {
+      x = 100 - x;
+      y = 100 - y;
+    }
+    let gx = Math.floor((x / 100) * gridW);
+    let gy = Math.floor((1 - y / 100) * gridH);
+    if (gx < 0) gx = 0;
+    else if (gx >= gridW) gx = gridW - 1;
+    if (gy < 0) gy = 0;
+    else if (gy >= gridH) gy = gridH - 1;
+    grid[gy * gridW + gx]++;
+    added++;
+  }
+  return added;
+}
+
+/**
  * Whether a period's coordinates should be mirrored onto the reference
  * attacking direction. Teams switch ends each half, so even periods (2nd half,
  * 2nd ET) are mirrored (x -> 100 - x). Period 0 (unknown/pre-match) is not.

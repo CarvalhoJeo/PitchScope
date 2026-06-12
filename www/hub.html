@@ -381,6 +381,28 @@
           </div>
         </div>
       </div>
+
+      <!-- Position Heatmap -->
+      <div id="controller17">
+        <div class="position-heatmap-sources"></div>
+        <div class="position-heatmap-settings setting-blocks">
+          <div class="title">
+            <div class="half">Time Range</div>
+            <div class="half">Direction</div>
+          </div>
+          <div class="input">
+            <div class="half">
+              <select class="time-range" tabindex="-1">
+                <option value="full">Full Log</option>
+                <option value="visible">Visible Range</option>
+              </select>
+            </div>
+            <div class="half">
+              <label><input class="normalize" type="checkbox" /> Normalize</label>
+            </div>
+          </div>
+        </div>
+      </div>
     </span>
 
     <span id="rendererTemplates" hidden>
@@ -444,6 +466,13 @@
       <div id="renderer16">
         <div class="event-timeline-canvas-container">
           <canvas class="event-timeline-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Position Heatmap -->
+      <div id="renderer17">
+        <div class="position-heatmap-canvas-container">
+          <canvas class="position-heatmap-canvas"></canvas>
         </div>
       </div>
     </span>

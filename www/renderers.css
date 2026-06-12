@@ -889,7 +889,8 @@ div.checkbox-row {
 /* Soccer widgets */
 div.soccer-field-canvas-container,
 div.passes-net-canvas-container,
-div.action-heatmap-canvas-container {
+div.action-heatmap-canvas-container,
+div.position-heatmap-canvas-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -899,11 +900,27 @@ div.action-heatmap-canvas-container {
 
 canvas.soccer-field-canvas,
 canvas.passes-net-canvas,
-canvas.action-heatmap-canvas {
+canvas.action-heatmap-canvas,
+canvas.position-heatmap-canvas {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+}
+
+/* Position heatmap controls: player source list (left) + settings (right) */
+div.source-list.position-heatmap-sources {
+  top: 10px;
+  left: 10px;
+  width: 55%;
+  height: calc(100% - 20px);
+}
+
+div.position-heatmap-settings {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 38%;
 }
 
 div.event-timeline-canvas-container {
