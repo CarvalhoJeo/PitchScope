@@ -10,8 +10,12 @@ import NamedMessage from "./shared/NamedMessage";
 import Preferences from "./shared/Preferences";
 import Selection, { SelectionMode } from "./shared/Selection";
 import TabType, { getTabIcon } from "./shared/TabType";
+import ActionHeatmapRenderer from "./shared/renderers/ActionHeatmapRenderer";
 import DocumentationRenderer from "./shared/renderers/DocumentationRenderer";
 import LineGraphRenderer from "./shared/renderers/LineGraphRenderer";
+import PassesNetRenderer from "./shared/renderers/PassesNetRenderer";
+import PositionHeatmapRenderer from "./shared/renderers/PositionHeatmapRenderer";
+import SoccerFieldRenderer from "./shared/renderers/SoccerFieldRenderer";
 import StatisticsRenderer from "./shared/renderers/StatisticsRenderer";
 import TabRenderer from "./shared/renderers/TabRenderer";
 import VideoRenderer from "./shared/renderers/VideoRenderer";
@@ -43,13 +47,13 @@ let lastCommand: any = null;
 function updateVisualizer() {
   if (type === null) return;
 
-  // Update visible elements
-  for (let i = 0; i < document.body.childElementCount; i++) {
-    let element = document.getElementById("renderer" + i.toString());
-    if (element !== null) {
-      element.hidden = type !== i;
-    }
-  }
+  // Update visible elements. TabType IDs are not sequential (legacy gaps from
+  // removed FRC widgets), so query renderer divs by id pattern instead of
+  // iterating a counter.
+  document.querySelectorAll<HTMLElement>('[id^="renderer"]').forEach((el) => {
+    const id = parseInt(el.id.slice("renderer".length), 10);
+    if (!Number.isNaN(id)) el.hidden = type !== id;
+  });
 
   // Create renderer
   let root = document.getElementById("renderer" + type.toString()) as HTMLElement;
@@ -65,6 +69,18 @@ function updateVisualizer() {
       break;
     case TabType.Video:
       renderer = new VideoRenderer(root);
+      break;
+    case TabType.SoccerField:
+      renderer = new SoccerFieldRenderer(root);
+      break;
+    case TabType.PassesNet:
+      renderer = new PassesNetRenderer(root);
+      break;
+    case TabType.ActionHeatmap:
+      renderer = new ActionHeatmapRenderer(root);
+      break;
+    case TabType.PositionHeatmap:
+      renderer = new PositionHeatmapRenderer(root);
       break;
   }
 }
