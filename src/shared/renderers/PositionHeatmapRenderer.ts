@@ -82,7 +82,7 @@ export default class PositionHeatmapRenderer implements TabRenderer {
       ctx.font = "16px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("Drag players here (needs a .tracking file)", W / 2, H / 2);
+      ctx.fillText("Drag players to the Players box", W / 2, H / 2);
       return;
     }
 
