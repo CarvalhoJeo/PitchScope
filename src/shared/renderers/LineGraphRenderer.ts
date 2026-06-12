@@ -10,7 +10,7 @@ import { ensureThemeContrast } from "../Colors";
 import LineGraphFilter from "../LineGraphFilter";
 import { SelectionMode } from "../Selection";
 import { Units } from "../units";
-import { calcAxisStepSize, clampValue, cleanFloat, scaleValue, shiftColor, ValueScaler } from "../util";
+import { calcAxisStepSize, clampValue, cleanFloat, formatTimeMinutes, scaleValue, shiftColor, ValueScaler } from "../util";
 import TabRenderer from "./TabRenderer";
 
 export default class LineGraphRenderer implements TabRenderer {
@@ -443,7 +443,7 @@ export default class LineGraphRenderer implements TabRenderer {
     // Use similar logic as main axes but with an extra decimal point of precision to format the popup timestamps
     let formatMarkedTimestampText = (time: number): string => {
       let fractionDigits = Math.max(0, -Math.floor(Math.log10(timeStepSize / 10)));
-      return time.toFixed(fractionDigits) + "s";
+      return formatTimeMinutes(time, fractionDigits);
     };
 
     // Write formatted timestamp popups to graph view
@@ -656,7 +656,7 @@ export default class LineGraphRenderer implements TabRenderer {
         x = graphLeft + graphWidth;
       }
 
-      let text = cleanFloat(stepPos).toString() + "s";
+      let text = formatTimeMinutes(stepPos, Math.max(0, -Math.floor(Math.log10(timeStepSize))));
 
       context.globalAlpha = 1;
       context.fillText(text, x, graphTop + graphHeight + 15);

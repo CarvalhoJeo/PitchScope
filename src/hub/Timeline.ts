@@ -6,7 +6,7 @@
 // at the root directory of this project.
 
 import { getRobotStateRanges } from "../shared/log/LogUtil";
-import { calcAxisStepSize, clampValue, cleanFloat, scaleValue } from "../shared/util";
+import { calcAxisStepSize, clampValue, cleanFloat, formatTimeMinutes, scaleValue } from "../shared/util";
 import ScrollSensor from "./ScrollSensor";
 
 export default class Timeline {
@@ -219,7 +219,7 @@ export default class Timeline {
         break;
       }
 
-      let text = cleanFloat(stepPos).toString() + "s";
+      let text = formatTimeMinutes(stepPos, Math.max(0, -Math.floor(Math.log10(stepSize))));
       let textWidth = context.measureText(text).width;
       let textX = clampValue(x, textWidth / 2 + 3, width - textWidth / 2 - 3);
       let textXRange = [textX - textWidth / 2, textX + textWidth / 2];

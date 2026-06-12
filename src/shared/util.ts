@@ -90,6 +90,21 @@ export function cleanFloat(float: number) {
   return output;
 }
 
+/**
+ * Formats a time in seconds as a minutes:seconds clock (e.g. 90 -> "1:30",
+ * 5400 -> "90:00"). Minutes are not wrapped at 60, matching a match clock.
+ * `fractionDigits` controls the precision of the seconds part.
+ */
+export function formatTimeMinutes(seconds: number, fractionDigits = 0): string {
+  let sign = seconds < 0 ? "-" : "";
+  let total = Math.abs(seconds);
+  let minutes = Math.floor(total / 60);
+  let secs = total - minutes * 60;
+  let secsStr = secs.toFixed(fractionDigits);
+  if (secs < 10) secsStr = "0" + secsStr; // pad the seconds integer part
+  return sign + minutes + ":" + secsStr;
+}
+
 /** Formats a time with milliseconds using three decimal places. */
 export function formatTimeWithMS(time: number): string {
   let seconds = Math.floor(time);
