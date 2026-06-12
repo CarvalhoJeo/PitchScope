@@ -3216,6 +3216,12 @@ if (process.platform === "linux") {
 }
 
 app.whenReady().then(() => {
+  // In unpackaged dev runs (`npm start`), macOS shows the generic Electron Dock icon
+  // because the .icns is only bundled by electron-builder. Override with the PNG.
+  if (process.platform === "darwin" && !app.isPackaged) {
+    app.dock?.setIcon(path.join(__dirname, "../icons/window-icon.png"));
+  }
+
   // Check preferences and set theme
   let prefs = DEFAULT_PREFS;
   if (process.platform === "linux") {
