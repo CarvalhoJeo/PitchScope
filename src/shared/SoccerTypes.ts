@@ -52,6 +52,13 @@ export const SPADL_BODYPART_TYPES: Record<number, string> = {
 // Pass action IDs (pass, cross, throw_in, freekick_cross, corner_cross, corner_short)
 export const PASS_ACTION_IDS = [0, 1, 2, 3, 5, 6];
 
+// Shot action IDs (shot, penalty_shot, freekick_shot, free_kick_shot)
+export const SHOT_ACTION_IDS = [11, 12, 4, 13];
+
+// Tackle and interception action IDs
+export const TACKLE_ACTION_ID = 9;
+export const INTERCEPTION_ACTION_ID = 10;
+
 // Team colors (team_id 1 = home, 2 = away)
 export const TEAM_COLORS: Record<number, string> = {
   1: "#e74c3c",

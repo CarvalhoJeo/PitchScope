@@ -5,243 +5,169 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-import { Chart, ChartDataset, LegendOptions, LinearScaleOptions, TooltipCallbacks, registerables } from "chart.js";
-import { ensureThemeContrast } from "../Colors";
-import { cleanFloat } from "../util";
+import { TEAM_COLORS } from "../SoccerTypes";
 import TabRenderer from "./TabRenderer";
 
+export interface StatisticsRow {
+  playerId: number;
+  teamId: number;
+  touches: number;
+  passesCompleted: number;
+  passesAttempted: number;
+  shots: number;
+  tackles: number;
+  interceptions: number;
+  distanceKm: number;
+  topSpeedKmh: number;
+}
+
+export interface StatisticsRendererCommand {
+  rows: StatisticsRow[];
+}
+
+type Column = {
+  label: string;
+  title: string;
+  value: (row: StatisticsRow) => number;
+  text: (row: StatisticsRow) => string;
+};
+
 export default class StatisticsRenderer implements TabRenderer {
-  private static registeredChart = false;
+  private TABLE: HTMLTableElement;
+  private BODY: HTMLTableSectionElement;
+  private lastRenderKey = "";
+  private lastCommand: StatisticsRendererCommand | null = null;
 
-  private VALUES_TABLE_CONTAINER: HTMLElement;
-  private VALUES_TABLE_BODY: HTMLElement;
-  private HISTOGRAM_CONTAINER: HTMLElement;
+  private sortIndex = 0; // default sort by player number
+  private sortDescending = false;
 
-  private changeCounter = -1;
-  private firstRender = true;
-  private lastIsLight: boolean | null = null;
-  private histogram: Chart;
-
-  /** Registers all Chart.js elements. */
-  private static registerChart() {
-    if (!this.registeredChart) {
-      this.registeredChart = true;
-      Chart.register(...registerables);
+  private columns: Column[] = [
+    { label: "Player", title: "Player number", value: (r) => r.playerId, text: (r) => r.playerId.toString() },
+    { label: "Touches", title: "Total on-ball actions", value: (r) => r.touches, text: (r) => r.touches.toString() },
+    {
+      label: "Passes (cmp/att)",
+      title: "Passes completed / attempted",
+      value: (r) => r.passesCompleted,
+      text: (r) => `${r.passesCompleted}/${r.passesAttempted}`
+    },
+    {
+      label: "Pass accuracy",
+      title: "Pass accuracy",
+      value: (r) => (r.passesAttempted === 0 ? -1 : r.passesCompleted / r.passesAttempted),
+      text: (r) => (r.passesAttempted === 0 ? "—" : Math.round((r.passesCompleted / r.passesAttempted) * 100) + "%")
+    },
+    { label: "Shots", title: "Shots", value: (r) => r.shots, text: (r) => r.shots.toString() },
+    { label: "Tackles", title: "Tackles", value: (r) => r.tackles, text: (r) => r.tackles.toString() },
+    {
+      label: "Interceptions",
+      title: "Interceptions",
+      value: (r) => r.interceptions,
+      text: (r) => r.interceptions.toString()
+    },
+    {
+      label: "Distance (km)",
+      title: "Distance covered, in kilometres",
+      value: (r) => r.distanceKm,
+      text: (r) => (r.distanceKm > 0 ? r.distanceKm.toFixed(1) : "—")
+    },
+    {
+      label: "Top speed (km/h)",
+      title: "Top speed, in kilometres per hour",
+      value: (r) => r.topSpeedKmh,
+      text: (r) => (r.topSpeedKmh > 0 ? r.topSpeedKmh.toFixed(1) : "—")
     }
-  }
+  ];
 
   constructor(root: HTMLElement) {
-    this.VALUES_TABLE_CONTAINER = root.getElementsByClassName("stats-values-container")[0] as HTMLElement;
-    this.VALUES_TABLE_BODY = this.VALUES_TABLE_CONTAINER.firstElementChild?.firstElementChild as HTMLElement;
-    this.HISTOGRAM_CONTAINER = root.getElementsByClassName("stats-histogram-container")[0] as HTMLElement;
+    root.innerHTML = "";
+    let scroll = document.createElement("div");
+    scroll.classList.add("player-stats-scroll");
+    root.appendChild(scroll);
 
-    // Create chart
-    StatisticsRenderer.registerChart();
-    this.histogram = new Chart(this.HISTOGRAM_CONTAINER.firstElementChild as HTMLCanvasElement, {
-      type: "bar",
-      data: {
-        labels: [],
-        datasets: []
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-          duration: 0
-        },
-        plugins: {
-          legend: {
-            onClick: () => {}
-          }
-        },
-        scales: {
-          x: {
-            type: "linear",
-            stacked: true,
-            offset: false,
-            grid: {
-              offset: false
-            },
-            ticks: {
-              stepSize: 1
-            }
-          },
-          y: {
-            stacked: true,
-            grace: 0.1
-          }
+    this.TABLE = document.createElement("table");
+    this.TABLE.classList.add("player-stats-table");
+    scroll.appendChild(this.TABLE);
+
+    // Header (sortable)
+    let head = document.createElement("thead");
+    this.TABLE.appendChild(head);
+    let headRow = document.createElement("tr");
+    head.appendChild(headRow);
+    this.columns.forEach((column, index) => {
+      let th = document.createElement("th");
+      th.innerText = column.label;
+      th.title = column.title + " (click to sort)";
+      th.addEventListener("click", () => {
+        if (this.sortIndex === index) {
+          this.sortDescending = !this.sortDescending;
+        } else {
+          this.sortIndex = index;
+          this.sortDescending = index !== 0; // text-ish first column sorts ascending by default
         }
-      }
+        this.lastRenderKey = "";
+        if (this.lastCommand) this.render(this.lastCommand);
+      });
+      headRow.appendChild(th);
     });
+
+    this.BODY = document.createElement("tbody");
+    this.TABLE.appendChild(this.BODY);
   }
 
   saveState(): unknown {
-    return null;
+    return { sortIndex: this.sortIndex, sortDescending: this.sortDescending };
   }
 
-  restoreState(state: unknown): void {}
+  restoreState(state: unknown): void {
+    if (typeof state !== "object" || state === null) return;
+    let s = state as any;
+    if (typeof s.sortIndex === "number") this.sortIndex = s.sortIndex;
+    if (typeof s.sortDescending === "boolean") this.sortDescending = s.sortDescending;
+  }
 
   getAspectRatio(): number | null {
     return null;
   }
 
   render(command: StatisticsRendererCommand): void {
-    // Update histogram layout
-    this.HISTOGRAM_CONTAINER.style.left = (this.VALUES_TABLE_CONTAINER.offsetWidth + 10).toString() + "px";
+    this.lastCommand = command;
 
-    // Update histogram colors
-    const isLight = !window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (isLight !== this.lastIsLight) {
-      this.lastIsLight = isLight;
-      (this.histogram.options.plugins!.legend as LegendOptions<"bar">).labels.color = isLight ? "#222" : "#eee";
-      let xAxisOptions = this.histogram.options.scales!.x as LinearScaleOptions;
-      let yAxisOptions = this.histogram.options.scales!.y as LinearScaleOptions;
-      xAxisOptions.ticks.color = isLight ? "#222" : "#eee";
-      yAxisOptions.ticks.color = isLight ? "#222" : "#eee";
-      xAxisOptions.border.color = isLight ? "#222" : "#eee";
-      yAxisOptions.border.color = isLight ? "#222" : "#eee";
-      xAxisOptions.grid.color = isLight ? "#eee" : "#333";
-      yAxisOptions.grid.color = isLight ? "#eee" : "#333";
-      this.histogram.update();
+    let renderKey = JSON.stringify([command.rows, this.sortIndex, this.sortDescending]);
+    if (renderKey === this.lastRenderKey) return;
+    this.lastRenderKey = renderKey;
+
+    // Mark the active sort column in the header
+    let headerCells = this.TABLE.tHead!.rows[0].cells;
+    for (let i = 0; i < headerCells.length; i++) {
+      let arrow = i === this.sortIndex ? (this.sortDescending ? " ▾" : " ▴") : "";
+      headerCells[i].innerText = this.columns[i].label + arrow;
     }
 
-    // Update data
-    if (command.changeCounter !== this.changeCounter || this.firstRender) {
-      this.firstRender = false;
-      this.changeCounter = command.changeCounter;
+    if (command.rows.length === 0) {
+      this.BODY.innerHTML = '<tr><td class="player-stats-empty" colspan="9">Load a .spadl and .tracking file</td></tr>';
+      return;
+    }
 
-      // Clear values
-      while (this.VALUES_TABLE_BODY.firstChild) {
-        this.VALUES_TABLE_BODY.removeChild(this.VALUES_TABLE_BODY.firstChild);
-      }
+    let column = this.columns[this.sortIndex];
+    let sorted = [...command.rows].sort((a, b) => {
+      let diff = column.value(a) - column.value(b);
+      if (diff === 0) diff = a.playerId - b.playerId;
+      return this.sortDescending ? -diff : diff;
+    });
 
-      // Add a new section header
-      let addSection = (title: string) => {
-        let row = document.createElement("tr");
-        this.VALUES_TABLE_BODY.appendChild(row);
-        row.classList.add("section");
-        let cell = document.createElement("td");
-        row.appendChild(cell);
-        cell.colSpan = Math.max(1 + command.fields.length, 2);
-        cell.innerText = title;
-      };
-
-      // Add a new row with data
-      let addValues = (title: string, digits: number, getValue: (stats: StatisticsRendererCommand_Stats) => number) => {
-        let row = document.createElement("tr");
-        this.VALUES_TABLE_BODY.appendChild(row);
-        row.classList.add("values");
-        let titleCell = document.createElement("td");
-        row.appendChild(titleCell);
-        titleCell.innerText = title;
-        command.fields.forEach((field) => {
-          let color = ensureThemeContrast(field.color);
-          let valueCell = document.createElement("td");
-          row.appendChild(valueCell);
-          let value = getValue(field.stats);
-          if (isNaN(value)) {
-            valueCell.innerText = "-";
-          } else {
-            valueCell.innerText = value.toFixed(digits);
-          }
-          valueCell.style.color = color;
-        });
-        if (command.fields.length === 0) {
-          let valueCell = document.createElement("td");
-          row.appendChild(valueCell);
-          valueCell.innerText = "-";
+    this.BODY.innerHTML = "";
+    sorted.forEach((row) => {
+      let tr = document.createElement("tr");
+      this.columns.forEach((col, index) => {
+        let td = document.createElement("td");
+        td.innerText = col.text(row);
+        if (index === 0) {
+          td.classList.add("player-stats-id");
+          td.style.borderLeft = "4px solid " + (TEAM_COLORS[row.teamId] ?? "#888");
         }
-      };
-
-      // Add all rows
-      addSection("Summary");
-      addValues("Count", 0, (x) => x.count);
-      addValues("Min", 3, (x) => x.min);
-      addValues("Max", 3, (x) => x.max);
-      addSection("Center");
-      addValues("Mean", 3, (x) => x.mean);
-      addValues("Median", 3, (x) => x.median);
-      addValues("Mode", 3, (x) => x.mode);
-      addValues("Geometric Mean", 3, (x) => x.geometricMean);
-      addValues("Harmonic Mean", 3, (x) => x.harmonicMean);
-      addValues("Quadratic Mean", 3, (x) => x.quadraticMean);
-      addSection("Spread");
-      addValues("Standard Deviation", 3, (x) => x.standardDeviation);
-      addValues("Median Absolute Deviation", 3, (x) => x.medianAbsoluteDeviation);
-      addValues("Interquartile Range", 3, (x) => x.interquartileRange);
-      addValues("Skewness", 3, (x) => x.skewness);
-      addSection("Percentiles");
-      addValues("1st Percentile", 3, (x) => x.percentile01);
-      addValues("5th Percentile", 3, (x) => x.percentile05);
-      addValues("10th Percentile", 3, (x) => x.percentile10);
-      addValues("25th Percentile", 3, (x) => x.percentile25);
-      addValues("50th Percentile", 3, (x) => x.percentile50);
-      addValues("75th Percentile", 3, (x) => x.percentile75);
-      addValues("90th Percentile", 3, (x) => x.percentile90);
-      addValues("95th Percentile", 3, (x) => x.percentile95);
-      addValues("99th Percentile", 3, (x) => x.percentile99);
-
-      // Update histogram data
-      this.histogram.data.labels = command.bins.map((value) => value + command.stepSize / 2);
-      this.histogram.data.datasets = command.fields.map((field) => {
-        const dataset: ChartDataset = {
-          label: field.title.length > 20 ? "..." + field.title.slice(-20) : field.title,
-          data: field.histogramCounts,
-          backgroundColor: ensureThemeContrast(field.color),
-          barPercentage: 1,
-          categoryPercentage: 1
-        };
-        return dataset;
+        tr.appendChild(td);
       });
-      (this.histogram.options.scales!.x as LinearScaleOptions).ticks.stepSize = command.stepSize;
-      (this.histogram.options.plugins!.tooltip!.callbacks as TooltipCallbacks<"bar">).title = (items) => {
-        if (items.length < 1) {
-          return "";
-        }
-        const item = items[0];
-        const x = item.parsed.x;
-        const min = x - command.stepSize / 2;
-        const max = x + command.stepSize / 2;
-        return cleanFloat(min).toString() + " to " + cleanFloat(max).toString();
-      };
-      this.histogram.update();
-    }
+      this.BODY.appendChild(tr);
+    });
   }
 }
-
-export type StatisticsRendererCommand = {
-  changeCounter: number;
-  bins: number[];
-  stepSize: number;
-  fields: {
-    title: string;
-    color: string;
-    histogramCounts: number[];
-    stats: StatisticsRendererCommand_Stats;
-  }[];
-};
-
-export type StatisticsRendererCommand_Stats = {
-  count: number;
-  min: number;
-  max: number;
-  mean: number;
-  median: number;
-  mode: number;
-  geometricMean: number;
-  harmonicMean: number;
-  quadraticMean: number;
-  standardDeviation: number;
-  medianAbsoluteDeviation: number;
-  interquartileRange: number;
-  skewness: number;
-  percentile01: number;
-  percentile05: number;
-  percentile10: number;
-  percentile25: number;
-  percentile50: number;
-  percentile75: number;
-  percentile90: number;
-  percentile95: number;
-  percentile99: number;
-};

@@ -18,6 +18,7 @@ export default interface Preferences {
   publishFilter: string;
   rlogPort: number;
   coordinateSystem: "automatic" | CoordinateSystem;
+  trackingSmoothing: "off" | "light" | "medium";
   field3dModeAc: "cinematic" | "standard" | "low-power";
   field3dModeBattery: "" | "cinematic" | "standard" | "low-power";
   field3dAntialiasing: boolean;
@@ -41,6 +42,7 @@ export const DEFAULT_PREFS: Preferences = {
   publishFilter: "",
   rlogPort: 5800,
   coordinateSystem: "automatic",
+  trackingSmoothing: "off",
   field3dModeAc: "standard",
   field3dModeBattery: "",
   field3dAntialiasing: true,
@@ -130,6 +132,14 @@ export function mergePreferences(basePrefs: Preferences, newPrefs: object) {
       newPrefs.coordinateSystem === "center-red")
   ) {
     basePrefs.coordinateSystem = newPrefs.coordinateSystem;
+  }
+  if (
+    "trackingSmoothing" in newPrefs &&
+    (newPrefs.trackingSmoothing === "off" ||
+      newPrefs.trackingSmoothing === "light" ||
+      newPrefs.trackingSmoothing === "medium")
+  ) {
+    basePrefs.trackingSmoothing = newPrefs.trackingSmoothing;
   }
   if (
     "threeDimensionModeAc" in newPrefs &&

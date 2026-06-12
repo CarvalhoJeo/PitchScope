@@ -2963,8 +2963,8 @@ function openPreferences(parentWindow: Electron.BrowserWindow) {
   }
 
   const width = 400;
-  const optionRows = 12;
-  const titleRows = 2;
+  const optionRows = 2;
+  const titleRows = 0;
   const height = optionRows * 27 + titleRows * 34 + 54;
   prefsWindow = new BrowserWindow({
     width: width,

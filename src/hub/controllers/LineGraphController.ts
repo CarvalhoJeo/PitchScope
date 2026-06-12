@@ -8,6 +8,7 @@
 import { ensureThemeContrast } from "../../shared/Colors";
 import LineGraphFilter from "../../shared/LineGraphFilter";
 import { SelectionMode } from "../../shared/Selection";
+import { getTrackingSmoothingRadius, smoothSeries } from "../../shared/soccer/SoccerLogReader";
 import { SourceListState } from "../../shared/SourceListConfig";
 import { AKIT_TIMESTAMP_KEYS, getEnabledKey, getLogValueText } from "../../shared/log/LogUtil";
 import { LogValueSetNumber } from "../../shared/log/LogValueSets";
@@ -535,6 +536,13 @@ export default class LineGraphController implements TabController {
         //  - Acceleration: rate of change of speed (second central difference)
         //  - Distance: cumulative path length travelled, from the start of the log
         if (isPairFilter && yData !== undefined) {
+          // Apply the "Tracking Smoothing" preference before differentiating so
+          // noisy positions don't produce superhuman speeds/accelerations.
+          let smoothRadius = getTrackingSmoothingRadius();
+          if (smoothRadius > 0) {
+            data.values = smoothSeries(data.values, smoothRadius);
+            yData.values = smoothSeries(yData.values, smoothRadius);
+          }
           if (filter === LineGraphFilter.Distance) {
             let xs = data.values;
             let ys = yData.values;

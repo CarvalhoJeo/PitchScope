@@ -5,7 +5,14 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-import { PASS_ACTION_IDS, SPADL_ACTION_TYPES, SPADL_BODYPART_TYPES, SPADL_RESULT_TYPES } from "../SoccerTypes";
+import {
+  PASS_ACTION_IDS,
+  PITCH_HEIGHT_M,
+  PITCH_WIDTH_M,
+  SPADL_ACTION_TYPES,
+  SPADL_BODYPART_TYPES,
+  SPADL_RESULT_TYPES
+} from "../SoccerTypes";
 
 /** A single SPADL action event, fully typed. */
 export interface SoccerAction {
@@ -105,7 +112,7 @@ export function readSoccerActions(start: number, end: number): SoccerAction[] {
 }
 
 /** Collects player IDs from /TeamLocation/{id}/x field keys. */
-function getTrackedPlayerIds(): number[] {
+export function getTrackedPlayerIds(): number[] {
   const playerIds: number[] = [];
   for (const key of window.log.getFieldKeys()) {
     if (key.startsWith("/TeamLocation/") && key.endsWith("/x")) {
@@ -157,6 +164,81 @@ export function readTrackedPosition(playerId: number, time: number): { x: number
   return {
     x: xData.values[xData.values.length - 1],
     y: yData.values[yData.values.length - 1],
+    teamId: teamData && teamData.values.length > 0 ? teamData.values[teamData.values.length - 1] : 0
+  };
+}
+
+/** Median-filter radius for the current "Tracking Smoothing" preference (0 = off). */
+export function getTrackingSmoothingRadius(): number {
+  switch (window.preferences?.trackingSmoothing) {
+    case "light":
+      return 1; // 3-sample median
+    case "medium":
+      return 3; // 7-sample median
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Median filter over a value series. A median (vs. moving average) removes
+ * single-frame tracking outliers — the cause of "superhuman" speeds — without
+ * smearing the real trajectory. Returns the input unchanged when radius <= 0.
+ */
+export function smoothSeries(values: number[], radius: number): number[] {
+  if (radius <= 0 || values.length === 0) return values;
+  const out = new Array<number>(values.length);
+  const buffer: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const lo = Math.max(0, i - radius);
+    const hi = Math.min(values.length - 1, i + radius);
+    buffer.length = 0;
+    for (let j = lo; j <= hi; j++) buffer.push(values[j]);
+    buffer.sort((a, b) => a - b);
+    out[i] = buffer[Math.floor(buffer.length / 2)];
+  }
+  return out;
+}
+
+/**
+ * Computes a player's distance covered and top speed over [start, end] from
+ * tracking data. Coordinates (0–100) are converted to metres via the pitch
+ * dimensions. A speed cap filters out tracking-noise spikes. Returns null when
+ * the player has fewer than 2 tracking samples.
+ */
+export function readPlayerMovementStats(
+  playerKey: string,
+  start: number,
+  end: number
+): { distanceKm: number; topSpeedKmh: number; teamId: number } | null {
+  const xData = window.log.getNumber(playerKey + "/x", start, end);
+  const yData = window.log.getNumber(playerKey + "/y", start, end);
+  const teamData = window.log.getNumber(playerKey + "/team_id", start, end);
+  if (!xData || !yData) return null;
+  const n = Math.min(xData.values.length, yData.values.length);
+  if (n < 2) return null;
+
+  const radius = getTrackingSmoothingRadius();
+  const xs = smoothSeries(xData.values, radius);
+  const ys = smoothSeries(yData.values, radius);
+
+  const SPEED_CAP_KMH = 45; // realistic ceiling; rejects single-frame tracking glitches
+  let distanceM = 0;
+  let topSpeedKmh = 0;
+  for (let i = 1; i < n; i++) {
+    const dxm = ((xs[i] - xs[i - 1]) / 100) * PITCH_WIDTH_M;
+    const dym = ((ys[i] - ys[i - 1]) / 100) * PITCH_HEIGHT_M;
+    const step = Math.hypot(dxm, dym);
+    distanceM += step;
+    const dt = xData.timestamps[i] - xData.timestamps[i - 1];
+    if (dt > 0) {
+      const speedKmh = (step / dt) * 3.6;
+      if (speedKmh > topSpeedKmh && speedKmh <= SPEED_CAP_KMH) topSpeedKmh = speedKmh;
+    }
+  }
+  return {
+    distanceKm: distanceM / 1000,
+    topSpeedKmh,
     teamId: teamData && teamData.values.length > 0 ? teamData.values[teamData.values.length - 1] : 0
   };
 }
