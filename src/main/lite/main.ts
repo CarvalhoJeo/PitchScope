@@ -357,7 +357,7 @@ async function handleHubMessage(message: NamedMessage) {
           localStorage.setItem(LocalStorageKeys.PREFS, JSON.stringify(prefs));
         }
         alert(
-          "The legacy numeric array format for structured data is deprecated and will be removed in 2027. Check the AdvantageScope documentation for details on migrating to a modern alternative."
+          "The legacy numeric array format for structured data is deprecated and will be removed in 2027. Check the PitchScope documentation for details on migrating to a modern alternative."
         );
       }
       break;
@@ -370,7 +370,7 @@ async function handleHubMessage(message: NamedMessage) {
         if (prefs.skipFTCExperimentalWarning) return;
         if (
           confirm(
-            "Support for FTC fields in AdvantageScope is an experimental feature, and may not function properly in all cases. Please report any problems via the GitHub issues page. Select OK to hide this message in the future."
+            "Support for FTC fields in PitchScope is an experimental feature, and may not function properly in all cases. Please report any problems via the GitHub issues page. Select OK to hide this message in the future."
           )
         ) {
           prefs.skipFTCExperimentalWarning = true;
@@ -396,7 +396,7 @@ async function handleHubMessage(message: NamedMessage) {
             // App menu
             menuItems = [
               {
-                content: "About AdvantageScope Lite",
+                content: "About PitchScope Lite",
                 callback() {
                   let detailLines: string[] = [];
                   detailLines.push("Version: " + LITE_VERSION);
@@ -404,7 +404,7 @@ async function handleHubMessage(message: NamedMessage) {
                   detailLines.push("Build Date: " + BUILD_DATE);
                   detailLines.push("User Agent: " + navigator.userAgent);
                   let detail = detailLines.join("\n");
-                  window.alert("======= AdvantageScope Lite =======\n" + COPYRIGHT + "\n\n" + detail);
+                  window.alert("======= PitchScope Lite =======\n" + COPYRIGHT + "\n\n" + detail);
                 }
               },
               {
@@ -1336,7 +1336,7 @@ window.addEventListener("load", () => {
     if (isBetaExpired()) {
       if (
         confirm(
-          `The AdvantageScope Lite ${
+          `The PitchScope Lite ${
             isAlpha() ? "alpha" : "beta"
           } is complete. Please follow the instructions in the documentation to update to the latest stable release.`
         )

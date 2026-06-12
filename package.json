@@ -1,8 +1,8 @@
 {
   "name": "advantagescope",
-  "productName": "AdvantageScope",
+  "productName": "PitchScope",
   "version": "26.0.1",
-  "description": "Robot telemetry application",
+  "description": "Soccer data visualization and analysis application",
   "author": {
     "name": "Littleton Robotics",
     "email": "software@littletonrobotics.org",

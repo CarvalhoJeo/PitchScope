@@ -14,8 +14,8 @@ window.addEventListener("load", () => {
     let moduleElement = document.createElement("div");
     moduleElement.classList.add("module-text");
     let moduleText = license.module;
-    if (DISTRIBUTION === Distribution.Lite && moduleText === "AdvantageScope") {
-      moduleText = "AdvantageScope Lite";
+    if (DISTRIBUTION === Distribution.Lite && moduleText === "PitchScope") {
+      moduleText = "PitchScope Lite";
     }
     moduleElement.innerText = moduleText;
     document.body.appendChild(moduleElement);

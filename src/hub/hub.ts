@@ -116,7 +116,7 @@ let dragData: any = null;
 // WINDOW UTILITIES
 
 function setWindowTitle(name: string, status?: string) {
-  let title = htmlEncode(name) + (status ? " (" + htmlEncode(status) + ")" : "") + " &mdash; AdvantageScope";
+  let title = htmlEncode(name) + (status ? " (" + htmlEncode(status) + ")" : "") + " &mdash; PitchScope";
   document.getElementsByTagName("title")[0].innerHTML = title;
   document.getElementsByClassName("title-bar-text")[0].innerHTML = title;
 }
@@ -621,7 +621,7 @@ async function handleMainMessage(message: NamedMessage) {
           console.warn(
             "Failed to load: " +
               window.assets!.loadFailures.join(", ") +
-              ". Check that all assets follow the format described in the AdvantageScope documentation."
+              ". Check that all assets follow the format described in the PitchScope documentation."
           );
         }
         if (newHasFailed && !oldHadFailed) {

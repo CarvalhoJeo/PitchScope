@@ -75,7 +75,7 @@ export default class UpdateChecker {
       this.alertDownloadUrl = null;
       this.alertMessage = "No update data available";
       this.alertDetail =
-        "No update information was found for the installed version of AdvantageScope. Please check the AdvantageScope GitHub repository to download the latest release.";
+        "No update information was found for the installed version of PitchScope. Please check the PitchScope GitHub repository to download the latest release.";
       return;
     }
 

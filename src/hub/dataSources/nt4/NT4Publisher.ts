@@ -40,7 +40,7 @@ export class NT4Publisher {
     this.client = new NT4_Client(
       address,
       NT4_PORTS_DEFAULT,
-      "AdvantageScope",
+      "PitchScope",
       () => {},
       () => {},
       () => {},

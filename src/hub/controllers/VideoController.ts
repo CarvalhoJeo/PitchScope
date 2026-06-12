@@ -94,7 +94,7 @@ export default class VideoController implements TabController {
         window.sendMainMessage("error", {
           title: "No API key",
           content:
-            "Please enter an API key for The Blue Alliance in the AdvantageScope preferences. An API key can be obtained from the Account page on The Blue Alliance website."
+            "Please enter an API key for The Blue Alliance in the PitchScope preferences. An API key can be obtained from the Account page on The Blue Alliance website."
         });
         return;
       }

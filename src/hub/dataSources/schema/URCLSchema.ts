@@ -186,7 +186,7 @@ export default class URCLSchema {
               deviceKey + "/AppliedOutputVoltage",
               JSON.stringify({
                 description:
-                  "Calculated by AdvantageScope. The estimated voltage output based on the applied output (duty cycle) and input voltage of the Spark."
+                  "Calculated by PitchScope. The estimated voltage output based on the applied output (duty cycle) and input voltage of the Spark."
               })
             );
           }
@@ -196,7 +196,7 @@ export default class URCLSchema {
               deviceKey + "/CurrentInput",
               JSON.stringify({
                 description:
-                  "Calculated by AdvantageScope. The input (supply) current based on the applied output (duty cycle) and output (stator) current of the Spark."
+                  "Calculated by PitchScope. The input (supply) current based on the applied output (duty cycle) and output (stator) current of the Spark."
               })
             );
           }

@@ -200,7 +200,7 @@ function generateWPILOG(
   progress: (progress: number) => void,
   timestamps?: number[]
 ): Uint8Array {
-  let encoder = new WPILOGEncoder("AdvantageScope");
+  let encoder = new WPILOGEncoder("PitchScope");
   fields.forEach((field, fieldIndex) => {
     let fieldData = log.getRange(field, -Infinity, Infinity);
     let fieldType = log.getType(field);
@@ -246,11 +246,11 @@ function generateWPILOG(
       }
     }
     if (metadata === "") {
-      metadata = JSON.stringify({ exporter: "AdvantageScope" });
+      metadata = JSON.stringify({ exporter: "PitchScope" });
     } else {
       try {
         let metadataParsed = JSON.parse(metadata);
-        metadataParsed.exporter = "AdvantageScope";
+        metadataParsed.exporter = "PitchScope";
         metadata = JSON.stringify(metadataParsed);
       } catch {}
     }
@@ -341,7 +341,7 @@ async function generateMCAP(
   let logBuffer = new TempBuffer();
   const writer = new McapWriter({ writable: logBuffer });
   await writer.start({
-    library: "AdvantageScope",
+    library: "PitchScope",
     profile: ""
   });
 

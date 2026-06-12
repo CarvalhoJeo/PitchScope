@@ -193,7 +193,7 @@ export class VideoProcessor {
   }
 
   private static async getFFmpegPath(window: BrowserWindow): Promise<string> {
-    // Check for AdvantageScope install (user data folder)
+    // Check for PitchScope install (user data folder)
     // Not compatible with Linux due to DNS issues, force a system install
     let ffmpegPath: string;
     if (process.platform === "win32") {
