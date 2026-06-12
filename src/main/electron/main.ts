@@ -1136,6 +1136,36 @@ async function handleHubMessage(window: BrowserWindow, message: NamedMessage) {
           );
           editAxisMenu.append(
             new MenuItem({
+              label: "Speed (X+Y)",
+              type: "checkbox",
+              checked: filter === LineGraphFilter.Speed,
+              click() {
+                sendMessage(window, "edit-axis", {
+                  legend: legend,
+                  lockedRange: lockedRange,
+                  unitConversion: unitConversion,
+                  filter: filter === LineGraphFilter.Speed ? LineGraphFilter.None : LineGraphFilter.Speed
+                });
+              }
+            })
+          );
+          editAxisMenu.append(
+            new MenuItem({
+              label: "Acceleration (X+Y)",
+              type: "checkbox",
+              checked: filter === LineGraphFilter.Acceleration,
+              click() {
+                sendMessage(window, "edit-axis", {
+                  legend: legend,
+                  lockedRange: lockedRange,
+                  unitConversion: unitConversion,
+                  filter: filter === LineGraphFilter.Acceleration ? LineGraphFilter.None : LineGraphFilter.Acceleration
+                });
+              }
+            })
+          );
+          editAxisMenu.append(
+            new MenuItem({
               type: "separator"
             })
           );

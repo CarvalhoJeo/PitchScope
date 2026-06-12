@@ -31,6 +31,11 @@ export type SourceListTypeConfig = {
   parentKey?: string;
   /** Parent key this child is attached to */
   childOf?: string;
+  /**
+   * Child key suffixes to auto-add beneath this parent when it is dropped
+   * (e.g. ["/x", "/y"]). Other children of the dragged field are ignored.
+   */
+  autoChildKeys?: string[];
   previewType?:
     | "Rotation2d"
     | "Translation2d"

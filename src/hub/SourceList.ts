@@ -505,6 +505,26 @@ export default class SourceList {
     }
   }
 
+  /**
+   * Adds a parent field along with its auto-children nested beneath it (e.g. a
+   * player with its "/x" and "/y" components). The parent type must define
+   * "autoChildKeys".
+   */
+  addFieldGroup(parentLogKey: string) {
+    let countBefore = this.state.length;
+    this.addField(parentLogKey);
+    if (this.state.length === countBefore) return; // Parent type not valid here
+    let parentIndex = this.state.length - 1;
+    let parentTypeConfig = this.config.types.find((typeConfig) => typeConfig.key === this.state[parentIndex].type);
+    if (parentTypeConfig?.autoChildKeys === undefined) return;
+    parentTypeConfig.autoChildKeys.forEach((suffix) => {
+      let childKey = parentLogKey + suffix;
+      if (window.log.getField(childKey) !== null) {
+        this.addField(childKey, parentIndex);
+      }
+    });
+  }
+
   /** Processes a item drag event, including rearranging fields if necessary. */
   private handleItemDrag(dragData: any) {
     let uuid: string = dragData.data.sourceListUUID;
@@ -697,8 +717,28 @@ export default class SourceList {
       this.DRAG_HIGHLIGHT.hidden = true;
       if (!typeValidAsChild) parentIndex = null;
       if (parentIndex !== null || typeValidAsRoot) {
+        // Identify dropped fields that are auto-grouping parents (e.g. a player
+        // whose "/x" and "/y" should nest beneath it). Only applies at root.
+        let groupParents: string[] = [];
+        if (parentIndex === null) {
+          dragData.data.fields.forEach((field: string) => {
+            let structuredType = window.log.getStructuredType(field);
+            let isGroupParent = this.config.types.some(
+              (typeConfig) =>
+                typeConfig.autoChildKeys !== undefined &&
+                structuredType !== null &&
+                typeConfig.sourceTypes.includes(structuredType)
+            );
+            if (isGroupParent) groupParents.push(field);
+          });
+        }
         draggedFields.forEach((field) => {
-          this.addField(field, parentIndex === null ? undefined : parentIndex);
+          if (groupParents.includes(field)) {
+            this.addFieldGroup(field);
+          } else if (!groupParents.some((parent) => field.startsWith(parent + "/"))) {
+            // Skip descendants of a grouped parent (they are added by the group)
+            this.addField(field, parentIndex === null ? undefined : parentIndex);
+          }
         });
       }
       Array.from(this.LIST.children).forEach((element) => {

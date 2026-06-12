@@ -14,6 +14,53 @@ export const LineGraphController_NumericConfig: SourceListConfig = {
   allowChildrenFromDrag: true,
   types: [
     {
+      key: "player",
+      display: "Player",
+      symbol: "location.fill",
+      showInTypeName: false,
+      color: "color",
+      sourceTypes: ["TeamLocationPlayer"],
+      showDocs: false,
+      parentKey: "player",
+      autoChildKeys: ["/x", "/y"],
+      options: [
+        {
+          key: "color",
+          display: "Color",
+          showInTypeName: false,
+          values: GraphColors
+        }
+      ]
+    },
+    {
+      key: "playerComponent",
+      display: "Component",
+      symbol: "scribble.variable",
+      showInTypeName: false,
+      color: "color",
+      sourceTypes: ["Number"],
+      showDocs: false,
+      childOf: "player",
+      options: [
+        {
+          key: "color",
+          display: "Color",
+          showInTypeName: false,
+          values: GraphColors
+        },
+        {
+          key: "size",
+          display: "Thickness",
+          showInTypeName: false,
+          values: [
+            { key: "normal", display: "Normal" },
+            { key: "bold", display: "Bold" },
+            { key: "verybold", display: "Very Bold" }
+          ]
+        }
+      ]
+    },
+    {
       key: "stepped",
       display: "Stepped",
       symbol: "stairs",

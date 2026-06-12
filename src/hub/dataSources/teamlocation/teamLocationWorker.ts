@@ -6,6 +6,7 @@
 // at the root directory of this project.
 
 import Log from "../../../shared/log/Log";
+import LoggableType from "../../../shared/log/LoggableType";
 import { HistoricalDataSource_WorkerRequest, HistoricalDataSource_WorkerResponse } from "../HistoricalDataSource";
 
 function sendResponse(response: HistoricalDataSource_WorkerResponse) {
@@ -52,6 +53,9 @@ self.onmessage = async (event) => {
     // Track last timestamp per player to handle duplicates
     let lastTimestampPerPlayer: Record<number, number> = {};
 
+    // Track player prefixes so each can be registered as a draggable group
+    let playerPrefixes: Set<string> = new Set();
+
     for (let i = 0; i < dataLines.length; i++) {
       let line = dataLines[i].trim();
       if (!line) continue;
@@ -78,11 +82,19 @@ self.onmessage = async (event) => {
       log.putNumber(`${prefix}/x`, timestamp, x);
       log.putNumber(`${prefix}/y`, timestamp, y);
       log.putNumber(`${prefix}/team_id`, timestamp, teamId);
+      playerPrefixes.add(prefix);
 
       if (i % 500 === 0) {
         sendResponse({ type: "progress", value: i / totalLines });
       }
     }
+
+    // Register each player as a structured field so the whole player (not just
+    // the individual x/y coordinates) can be dragged onto a tab and grouped.
+    playerPrefixes.forEach((prefix) => {
+      log.createBlankField(prefix, LoggableType.Empty);
+      log.setStructuredType(prefix, "TeamLocationPlayer");
+    });
 
     log.getChangedFields();
     sendResponse({ type: "progress", value: 1 });

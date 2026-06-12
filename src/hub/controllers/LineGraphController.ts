@@ -221,6 +221,12 @@ export default class LineGraphController implements TabController {
       case LineGraphFilter.Integrate:
         leftLabels.push("Integrated");
         break;
+      case LineGraphFilter.Speed:
+        leftLabels.push("Speed");
+        break;
+      case LineGraphFilter.Acceleration:
+        leftLabels.push("Acceleration");
+        break;
     }
     if (leftLabels.length > 0) {
       this.leftSourceList.setTitle("Left Axis [" + leftLabels.join(", ") + "]");
@@ -245,6 +251,12 @@ export default class LineGraphController implements TabController {
         break;
       case LineGraphFilter.Integrate:
         rightLabels.push("Integrated");
+        break;
+      case LineGraphFilter.Speed:
+        rightLabels.push("Speed");
+        break;
+      case LineGraphFilter.Acceleration:
+        rightLabels.push("Acceleration");
         break;
     }
     if (rightLabels.length > 0) {
@@ -464,20 +476,83 @@ export default class LineGraphController implements TabController {
         setUnits(unitConversion.preset.to);
       }
 
+      // Speed/Acceleration combine the "/x" and "/y" fields of a coordinate
+      // pair into a single magnitude series. Each pair is processed from its
+      // "/x" field; the sibling "/y" must also be present on the same axis.
+      let isPairFilter = filter === LineGraphFilter.Speed || filter === LineGraphFilter.Acceleration;
+
+      // Differentiate a value/timestamp series via central difference. Mirrors
+      // the Differentiate filter: drops the leading sample so the result aligns
+      // to timestamps[1..].
+      let differentiate = (values: number[], timestamps: number[]): { values: number[]; timestamps: number[] } => {
+        let out: number[] = [];
+        for (let i = 1; i < values.length; i++) {
+          let prevIndex = Math.max(0, i - 1);
+          let nextIndex = Math.min(values.length - 1, i + 1);
+          out.push((values[nextIndex] - values[prevIndex]) / (timestamps[nextIndex] - timestamps[prevIndex]));
+        }
+        return { values: out, timestamps: timestamps.slice(1) };
+      };
+
       // Process fields
       source.forEach((fieldItem) => {
+        // Resolve coordinate pair for Speed/Acceleration
+        let yData: LogValueSetNumber | undefined = undefined;
+        if (isPairFilter) {
+          if (!fieldItem.logKey.endsWith("/x")) return; // process from "/x"; skip "/y" and scalars
+          let yKey = fieldItem.logKey.slice(0, -2) + "/y";
+          if (!source.some((item) => item.logKey === yKey)) return; // sibling not added to this axis
+          yData = window.log.getNumber(
+            yKey,
+            timeRange[0],
+            timeRange[1],
+            undefined,
+            filter === LineGraphFilter.Acceleration ? -2 : -1
+          );
+          if (yData === undefined) return;
+        }
+
         let data = window.log.getNumber(
           fieldItem.logKey,
           filter === LineGraphFilter.Integrate ? -Infinity : timeRange[0],
           timeRange[1],
           undefined,
-          filter === LineGraphFilter.Differentiate ? -1 : 0
+          isPairFilter
+            ? filter === LineGraphFilter.Acceleration
+              ? -2
+              : -1
+            : filter === LineGraphFilter.Differentiate
+            ? -1
+            : 0
         );
         if (data === undefined) return;
 
-        // Add AdvantageKit samples
-        if (akitTimestamps !== undefined) {
-          switch (fieldItem.type) {
+        // Combine x/y into speed (magnitude of velocity) or acceleration
+        // (rate of change of speed). Acceleration fetches an extra leading
+        // sample so the second derivative aligns to the start of the range.
+        if (isPairFilter && yData !== undefined) {
+          let vx = differentiate(data.values, data.timestamps);
+          let vy = differentiate(yData.values, yData.timestamps);
+          let length = Math.min(vx.values.length, vy.values.length);
+          let speedValues: number[] = [];
+          for (let i = 0; i < length; i++) {
+            speedValues.push(Math.hypot(vx.values[i], vy.values[i]));
+          }
+          if (filter === LineGraphFilter.Speed) {
+            data = { timestamps: vx.timestamps.slice(0, length), values: speedValues };
+          } else {
+            let accel = differentiate(speedValues, vx.timestamps.slice(0, length));
+            data = { timestamps: accel.timestamps, values: accel.values };
+          }
+        }
+
+        // Player components ("/x", "/y" grouped under a player) render as a
+        // smooth line like a normal position field.
+        let fieldType = fieldItem.type === "playerComponent" ? "smooth" : fieldItem.type;
+
+        // Add AdvantageKit samples (skip for combined pairs to keep x/y aligned)
+        if (akitTimestamps !== undefined && !isPairFilter) {
+          switch (fieldType) {
             case "stepped":
               // Extra samples wouldn't affect rendering
               break;
@@ -567,7 +642,7 @@ export default class LineGraphController implements TabController {
 
         // Trim early point
         if (data.timestamps.length > 0 && data.timestamps[0] < timeRange[0]) {
-          switch (fieldItem.type) {
+          switch (fieldType) {
             case "stepped":
               // Keep, adjust timestamp
               data.timestamps[0] = timeRange[0];
@@ -593,7 +668,7 @@ export default class LineGraphController implements TabController {
 
         // Trim late point
         if (data.timestamps.length > 0 && data.timestamps[data.timestamps.length - 1] > timeRange[1]) {
-          switch (fieldItem.type) {
+          switch (fieldType) {
             case "stepped":
             case "points":
               // Remove, no effect on displayed range
@@ -613,7 +688,7 @@ export default class LineGraphController implements TabController {
               break;
           }
         } else if (
-          fieldItem.type === "smooth" &&
+          fieldType === "smooth" &&
           data.timestamps.length >= 1 &&
           data.timestamps[data.timestamps.length - 1] < timeRange[1]
         ) {
@@ -635,7 +710,7 @@ export default class LineGraphController implements TabController {
           timestamps: data.timestamps,
           values: data.values,
           color: ensureThemeContrast(fieldItem.options.color),
-          type: fieldItem.type as "smooth" | "stepped" | "points",
+          type: fieldType as "smooth" | "stepped" | "points",
           size: fieldItem.options.size as "normal" | "bold" | "verybold",
           hasUnit: hasUnit
         };

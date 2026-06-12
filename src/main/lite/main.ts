@@ -1005,6 +1005,28 @@ async function handleHubMessage(message: NamedMessage) {
               });
             }
           });
+          menuItems.push({
+            content: (filter === LineGraphFilter.Speed ? "\u2714 " : "") + "Speed (X+Y)",
+            callback() {
+              sendMessage(hubPort, "edit-axis", {
+                legend: legend,
+                lockedRange: lockedRange,
+                unitConversion: unitConversion,
+                filter: filter === LineGraphFilter.Speed ? LineGraphFilter.None : LineGraphFilter.Speed
+              });
+            }
+          });
+          menuItems.push({
+            content: (filter === LineGraphFilter.Acceleration ? "\u2714 " : "") + "Acceleration (X+Y)",
+            callback() {
+              sendMessage(hubPort, "edit-axis", {
+                legend: legend,
+                lockedRange: lockedRange,
+                unitConversion: unitConversion,
+                filter: filter === LineGraphFilter.Acceleration ? LineGraphFilter.None : LineGraphFilter.Acceleration
+              });
+            }
+          });
           menuItems.push("-");
         }
 
