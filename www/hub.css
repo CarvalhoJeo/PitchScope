@@ -1480,6 +1480,12 @@ div.setting-blocks input {
   text-align: center;
 }
 
+div.setting-blocks input[type="checkbox"] {
+  width: auto;
+  margin: 0 4px 0 0;
+  vertical-align: middle;
+}
+
 div.setting-blocks select:not(.field-select) {
   margin: 5px;
   width: 70%;

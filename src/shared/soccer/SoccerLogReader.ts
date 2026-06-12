@@ -162,6 +162,53 @@ export function readTrackedPosition(playerId: number, time: number): { x: number
 }
 
 /**
+ * Whether a period's coordinates should be mirrored onto the reference
+ * attacking direction. Teams switch ends each half, so even periods (2nd half,
+ * 2nd ET) are mirrored (x -> 100 - x). Period 0 (unknown/pre-match) is not.
+ */
+export function shouldFlipPeriod(period: number): boolean {
+  return period > 0 && period % 2 === 0;
+}
+
+/**
+ * Each tracked player's average position over the whole match, direction-
+ * normalized: x is mirrored on even periods so both halves share one attacking
+ * direction (otherwise the halftime end-switch pulls everyone to the centre).
+ * Players with no tracking samples are excluded.
+ */
+export function readPlayerNormalizedAveragePositions(): Map<number, { x: number; y: number; teamId: number }> {
+  const result = new Map<number, { x: number; y: number; teamId: number }>();
+  const playerIds = getTrackedPlayerIds();
+  if (playerIds.length === 0) return result;
+
+  const periodData = window.log.getNumber("/SPADL/period_id", -Infinity, Infinity);
+
+  for (const playerId of playerIds) {
+    const xData    = window.log.getNumber(`/TeamLocation/${playerId}/x`,       -Infinity, Infinity);
+    const yData    = window.log.getNumber(`/TeamLocation/${playerId}/y`,       -Infinity, Infinity);
+    const teamData = window.log.getNumber(`/TeamLocation/${playerId}/team_id`, -Infinity, Infinity);
+    if (!xData || xData.values.length === 0) continue;
+    if (!yData || yData.values.length === 0) continue;
+
+    const n = Math.min(xData.values.length, yData.values.length);
+    let sumX = 0;
+    let sumY = 0;
+    for (let i = 0; i < n; i++) {
+      let x = xData.values[i];
+      if (shouldFlipPeriod(stepValueAt(periodData, xData.timestamps[i]))) x = 100 - x;
+      sumX += x;
+      sumY += yData.values[i];
+    }
+    result.set(playerId, {
+      x: sumX / n,
+      y: sumY / n,
+      teamId: teamData && teamData.values.length > 0 ? teamData.values[teamData.values.length - 1] : 0
+    });
+  }
+  return result;
+}
+
+/**
  * Computes each tracked player's average position over [start, end].
  * Uses all tracking samples in that range. Players with no samples are excluded.
  */

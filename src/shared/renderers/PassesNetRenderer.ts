@@ -29,6 +29,7 @@ export interface PassesNetRendererCommand {
   nodes: PassesNetNode[];
   edges: PassesNetEdge[];
   maxEdgeCount: number;
+  showCounts: boolean;
 }
 
 export default class PassesNetRenderer implements TabRenderer {
@@ -71,7 +72,7 @@ export default class PassesNetRenderer implements TabRenderer {
    */
   private declutter(nodes: PassesNetNode[], nodePos: Map<number, [number, number]>, W: number, H: number): void {
     if (nodes.length < 2) return;
-    const SPREAD = 2.0; // how far to fan nodes out from their team centroid
+    const SPREAD = 1.3; // gentle fan-out from the team centroid (positions are now direction-normalized)
     const PADDING = 4; // extra gap between separated circles (px)
     const MAX_ITERATIONS = 80;
 
@@ -186,80 +187,40 @@ export default class PassesNetRenderer implements TabRenderer {
     // team's nodes out from their centroid and then separate any overlaps.
     this.declutter(command.nodes, nodePos, W, H);
 
-    // Detect bidirectional pairs so we can bow the two arrows in opposite directions
-    let edgeKeys = new Set(command.edges.map((e) => `${e.fromPlayer}-${e.toPlayer}`));
-
-    // Draw edges
+    // Draw edges — one undirected line per player pair, weighted by total passes
     let maxCount = command.maxEdgeCount || 1;
     command.edges.forEach((edge) => {
       let from = nodePos.get(edge.fromPlayer);
       let to = nodePos.get(edge.toPlayer);
       if (!from || !to) return;
 
-      const dx = to[0] - from[0];
-      const dy = to[1] - from[1];
-      const len = Math.sqrt(dx * dx + dy * dy);
-      const midX = (from[0] + to[0]) / 2;
-      const midY = (from[1] + to[1]) / 2;
-      const angle = Math.atan2(dy, dx);
-
       let color = TEAM_COLORS[edge.teamId] ?? "#aaaaaa";
       let alpha = 0.3 + 0.5 * (edge.count / maxCount);
       let lineWidth = 1 + (edge.count / maxCount) * 8;
       let strokeColor = color + Math.round(alpha * 255).toString(16).padStart(2, "0");
 
-      // Bidirectional → bow this arrow into a quadratic-Bezier arc, perpendicular to
-      // direction of travel.  The reverse edge bows the opposite way, so the two
-      // arrows separate cleanly even with thick lines.  Apex height scales with
-      // line width so thick arrows still get visual breathing room.
-      const hasReverse = edgeKeys.has(`${edge.toPlayer}-${edge.fromPlayer}`);
-      const arcHeight = hasReverse && len > 0 ? Math.max(14, lineWidth * 1.6 + 6) : 0;
-
-      // Apex of the arc = midpoint pushed perpendicular (right of direction of travel)
-      const perpX = len > 0 ? -dy / len : 0;
-      const perpY = len > 0 ?  dx / len : 0;
-      const apexX = midX + perpX * arcHeight;
-      const apexY = midY + perpY * arcHeight;
-
-      // Draw straight line or quadratic-Bezier arc.  Control point chosen so the
-      // curve's t=0.5 point lands exactly on (apexX, apexY): C = 2*apex - midpoint.
       ctx.beginPath();
       ctx.moveTo(from[0], from[1]);
-      if (arcHeight > 0) {
-        ctx.quadraticCurveTo(2 * apexX - midX, 2 * apexY - midY, to[0], to[1]);
-      } else {
-        ctx.lineTo(to[0], to[1]);
-      }
+      ctx.lineTo(to[0], to[1]);
       ctx.strokeStyle = strokeColor;
       ctx.lineWidth = lineWidth;
       ctx.stroke();
 
-      // Arrowhead at the apex.  Tangent at t=0.5 of a symmetric quadratic Bezier
-      // equals the straight-line direction, so `angle` is already correct.
-      const arrowSize = Math.max(8, lineWidth + 4);
-      ctx.beginPath();
-      ctx.moveTo(apexX, apexY);
-      ctx.lineTo(apexX - arrowSize * Math.cos(angle - Math.PI / 6), apexY - arrowSize * Math.sin(angle - Math.PI / 6));
-      ctx.lineTo(apexX - arrowSize * Math.cos(angle + Math.PI / 6), apexY - arrowSize * Math.sin(angle + Math.PI / 6));
-      ctx.closePath();
-      ctx.fillStyle = strokeColor;
-      ctx.fill();
-
-      // Count label — sit just past the apex on the outside of the curve so it
-      // never overlaps the arrow body or the partner's label.
-      const labelOffset = arcHeight > 0 ? 9 : 0;
-      const labelX = apexX + perpX * labelOffset;
-      const labelY = apexY + perpY * labelOffset;
-      ctx.save();
-      ctx.font = "bold 11px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "rgba(0,0,0,0.75)";
-      ctx.lineWidth = 3;
-      ctx.strokeText(edge.count.toString(), labelX, labelY);
-      ctx.fillText(edge.count.toString(), labelX, labelY);
-      ctx.restore();
+      // Count label at the line midpoint
+      if (command.showCounts) {
+        const midX = (from[0] + to[0]) / 2;
+        const midY = (from[1] + to[1]) / 2;
+        ctx.save();
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "rgba(0,0,0,0.75)";
+        ctx.lineWidth = 3;
+        ctx.strokeText(edge.count.toString(), midX, midY);
+        ctx.fillText(edge.count.toString(), midX, midY);
+        ctx.restore();
+      }
     });
 
     // Draw nodes

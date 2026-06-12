@@ -509,11 +509,26 @@
             </div>
           </div>
           <div class="title">
-            <div class="full">Min passes per link</div>
+            <div class="half">Min passes</div>
+            <div class="half">Counts</div>
+          </div>
+          <div class="input">
+            <div class="half">
+              <input class="min-passes" type="number" value="1" min="1" tabindex="-1" />
+            </div>
+            <div class="half">
+              <label><input class="show-counts" type="checkbox" checked /> Show</label>
+            </div>
+          </div>
+          <div class="title">
+            <div class="full">Node positions</div>
           </div>
           <div class="input">
             <div>
-              <input class="min-passes" type="number" value="1" min="1" tabindex="-1" />
+              <select class="position-mode" tabindex="-1">
+                <option value="events">Pass events</option>
+                <option value="average">Average (tracking)</option>
+              </select>
             </div>
           </div>
         </div>
@@ -552,14 +567,18 @@
             </div>
           </div>
           <div class="title">
-            <div class="full">Time Range</div>
+            <div class="half">Time Range</div>
+            <div class="half">Direction</div>
           </div>
           <div class="input">
-            <div>
+            <div class="half">
               <select class="time-range" tabindex="-1">
                 <option value="full">Full Log</option>
                 <option value="visible">Visible Range</option>
               </select>
+            </div>
+            <div class="half">
+              <label><input class="normalize" type="checkbox" /> Normalize</label>
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@
 // at the root directory of this project.
 
 import { ActionHeatmapRendererCommand } from "../../shared/renderers/ActionHeatmapRenderer";
-import { readSoccerActions } from "../../shared/soccer/SoccerLogReader";
+import { readSoccerActions, shouldFlipPeriod } from "../../shared/soccer/SoccerLogReader";
 import { createUUID } from "../../shared/util";
 import TabController from "./TabController";
 
@@ -16,18 +16,21 @@ export default class ActionHeatmapController implements TabController {
   private ACTION_TYPE: HTMLSelectElement;
   private TEAM_FILTER: HTMLSelectElement;
   private TIME_RANGE: HTMLSelectElement;
+  private NORMALIZE: HTMLInputElement;
 
   constructor(root: HTMLElement) {
     this.ACTION_TYPE = root.getElementsByClassName("action-type")[0] as HTMLSelectElement;
     this.TEAM_FILTER = root.getElementsByClassName("team-filter")[0] as HTMLSelectElement;
     this.TIME_RANGE = root.getElementsByClassName("time-range")[0] as HTMLSelectElement;
+    this.NORMALIZE = root.getElementsByClassName("normalize")[0] as HTMLInputElement;
   }
 
   saveState(): unknown {
     return {
       actionType: this.ACTION_TYPE.value,
       teamFilter: this.TEAM_FILTER.value,
-      timeRange: this.TIME_RANGE.value
+      timeRange: this.TIME_RANGE.value,
+      normalize: this.NORMALIZE.checked
     };
   }
 
@@ -37,6 +40,7 @@ export default class ActionHeatmapController implements TabController {
     if ("actionType" in s) this.ACTION_TYPE.value = s.actionType;
     if ("teamFilter" in s) this.TEAM_FILTER.value = s.teamFilter;
     if ("timeRange" in s) this.TIME_RANGE.value = s.timeRange;
+    if ("normalize" in s) this.NORMALIZE.checked = s.normalize;
   }
 
   refresh(): void {}
@@ -59,12 +63,16 @@ export default class ActionHeatmapController implements TabController {
     let actions = readSoccerActions(start, end);
     let selectedActionId = this.ACTION_TYPE.value !== "all" ? parseInt(this.ACTION_TYPE.value) : -1;
     let selectedTeam = this.TEAM_FILTER.value !== "all" ? parseInt(this.TEAM_FILTER.value) : -1;
+    let normalize = this.NORMALIZE.checked;
 
     let points: { x: number; y: number }[] = [];
     for (const action of actions) {
       if (selectedActionId !== -1 && action.actionTypeId !== selectedActionId) continue;
       if (selectedTeam !== -1 && action.teamId !== selectedTeam) continue;
-      points.push({ x: action.startX, y: action.startY });
+      // Teams switch ends each half; mirror the attacking axis on even periods
+      // so both halves overlay in one consistent direction.
+      let x = normalize && shouldFlipPeriod(action.periodId) ? 100 - action.startX : action.startX;
+      points.push({ x, y: action.startY });
     }
 
     let actionLabel =
