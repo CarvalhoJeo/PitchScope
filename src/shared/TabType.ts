@@ -49,7 +49,7 @@ export function getDefaultTabTitle(type: TabType): string {
     case TabType.SoccerField:
       return "Soccer Field";
     case TabType.PassesNet:
-      return "Passes Net";
+      return "Passing Network";
     case TabType.ActionHeatmap:
       return "Action Heatmap";
     case TabType.PositionHeatmap:

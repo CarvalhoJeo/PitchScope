@@ -89,7 +89,7 @@ Each row is one SPADL action. The header must include every column below (case-i
 | 18 | dribble |
 | 19 | goalkick |
 
-> Pass-family actions (used by the Pass Network widget): IDs 0, 1, 2, 3, 5, 6.
+> Pass-family actions (used by the Passing Network widget): IDs 0, 1, 2, 3, 5, 6.
 
 **Result IDs**
 
@@ -138,7 +138,7 @@ Each row is one position sample for one player. The header must include every co
 
 **Timestamps:** Multiple players can share the same timestamp (one row per player per frame). Duplicate timestamps for the same player are offset by 0.001 s automatically.
 
-**Player IDs:** Must be consistent with the `player_id` values in the `.spadl` file. The Pass Network and Heat Map widgets derive average positions from tracking data and match them to SPADL actions by player ID.
+**Player IDs:** Must be consistent with the `player_id` values in the `.spadl` file. The Passing Network and Heat Map widgets derive average positions from tracking data and match them to SPADL actions by player ID.
 
 **Example rows**
 
