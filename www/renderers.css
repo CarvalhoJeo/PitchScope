@@ -908,6 +908,88 @@ canvas.position-heatmap-canvas {
   transform: translate(-50%, -50%);
 }
 
+/* Player group / formation toolbar overlaid on the soccer field */
+div.soccer-group-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-size: 11px;
+  user-select: none;
+}
+
+div.soccer-group-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+div.soccer-group-toolbar button {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+div.soccer-group-toolbar button:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+div.soccer-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background-color: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+div.soccer-group-chip.active {
+  border-color: var(--group-color);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+span.soccer-group-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--group-color);
+}
+
+span.soccer-group-delete {
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+span.soccer-group-delete:hover {
+  opacity: 1;
+}
+
+label.soccer-group-hull {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+div.soccer-group-hint {
+  opacity: 0.75;
+  font-size: 10px;
+}
+
 /* Player stats table */
 div.player-stats {
   position: absolute;
